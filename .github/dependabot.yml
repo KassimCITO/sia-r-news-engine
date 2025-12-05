@@ -1,0 +1,36 @@
+version: 2
+updates:
+  # Monitoreo automático de dependencias Python
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "kassimcito"
+    assignees:
+      - "kassimcito"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "chore"
+      prefix-scope: "deps"
+      include: "scope"
+    # Agrupar actualizaciones de seguridad (crítico)
+    security-updates-only: false
+    # Permitir actualizaciones menores automáticas
+    allow:
+      - dependency-type: "all"
+
+  # Monitoreo de acciones de GitHub (opcional)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "github-actions"
