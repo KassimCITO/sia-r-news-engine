@@ -332,11 +332,168 @@ function saveNotifications() {
 }
 
 function testWPConnection() {
-    alert('Probar conexión con WordPress');
+    const wpUrl = document.getElementById('wp-url').value.trim();
+    const wpToken = document.getElementById('wp-token').value.trim();
+    
+    if (!wpUrl || !wpToken) {
+        showToast('Error', 'Por favor completa URL y token', 'error');
+        return;
+    }
+    
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Probando...';
+    
+    fetch('/api/ui/test/wordpress', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getToken()
+        },
+        body: JSON.stringify({
+            url: wpUrl,
+            token: wpToken
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('Éxito', `✓ ${data.message}\nSitio: ${data.site_info.title}`, 'success');
+        } else {
+            showToast('Error', `✗ ${data.message}`, 'error');
+        }
+    })
+    .catch(err => {
+        showToast('Error', `✗ Error de conexión: ${err.message}`, 'error');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
 }
 
 function testOpenAIConnection() {
-    alert('Probar conexión con OpenAI API');
+    const openaiKey = document.getElementById('openai-key').value.trim();
+    
+    if (!openaiKey) {
+        showToast('Error', 'Por favor ingresa tu clave de API', 'error');
+        return;
+    }
+    
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Probando...';
+    
+    fetch('/api/ui/test/openai', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getToken()
+        },
+        body: JSON.stringify({
+            api_key: openaiKey
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('Éxito', `✓ ${data.message}\nModelo: ${data.model}`, 'success');
+        } else {
+            showToast('Error', `✗ ${data.message}`, 'error');
+        }
+    })
+    .catch(err => {
+        showToast('Error', `✗ Error de conexión: ${err.message}`, 'error');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+
+function showToast(title, message, type = 'info') {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        `;
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Determine colors based on type
+    const colors = {
+        success: { bg: '#d4edda', border: '#c3e6cb', text: '#155724' },
+        error: { bg: '#f8d7da', border: '#f5c6cb', text: '#721c24' },
+        info: { bg: '#d1ecf1', border: '#bee5eb', text: '#0c5460' }
+    };
+    
+    const color = colors[type] || colors.info;
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        background-color: ${color.bg};
+        border: 1px solid ${color.border};
+        color: ${color.text};
+        padding: 15px 20px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease-in-out;
+        max-width: 400px;
+    `;
+    
+    if (title) {
+        toast.innerHTML = `<strong>${title}:</strong> ${message}`;
+    } else {
+        toast.innerHTML = message;
+    }
+    
+    toastContainer.appendChild(toast);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-in-out';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
+// Add CSS animations if not present
+if (!document.getElementById('toast-styles')) {
+    const style = document.createElement('style');
+    style.id = 'toast-styles';
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 function getToken() {

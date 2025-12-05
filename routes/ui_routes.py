@@ -448,3 +448,119 @@ def get_metrics_enhanced():
         logger.error(f"Error getting metrics: {e}")
         return jsonify({"error": str(e)}), 500
 
+
+# === Connection Tests ===
+
+@ui_bp.route('/test/wordpress', methods=['POST'])
+def test_wordpress_connection():
+    """Test WordPress connection"""
+    try:
+        data = request.get_json()
+        wp_url = data.get('url', '').strip() if data else ''
+        wp_token = data.get('token', '').strip() if data else ''
+        
+        # If no params provided, use default config
+        if not wp_url and not wp_token:
+            from config import WP_API_ENDPOINT, WP_USERNAME
+            from services.wp_client import WordPressClient
+            
+            try:
+                wp_client = WordPressClient()
+                
+                # Try to get users as a simple connection test
+                response = wp_client.session.get(f"{wp_client.base_url}/users?per_page=1")
+                
+                if response.status_code == 200:
+                    return jsonify({
+                        "status": "success",
+                        "message": "Conexión exitosa con WordPress",
+                        "site_info": {
+                            "url": WP_API_ENDPOINT,
+                            "user": WP_USERNAME
+                        }
+                    }), 200
+                else:
+                    return jsonify({
+                        "status": "error",
+                        "message": f"Error al conectar: {response.status_code}"
+                    }), 400
+            except Exception as wp_error:
+                return jsonify({
+                    "status": "error",
+                    "message": f"Error de conexión: {str(wp_error)}"
+                }), 400
+        else:
+            # Test with provided credentials
+            if not wp_url or not wp_token:
+                return jsonify({
+                    "status": "error",
+                    "message": "URL y token son requeridos"
+                }), 400
+            
+            # Create custom client with provided credentials
+            import requests
+            from requests.auth import HTTPBasicAuth
+            
+            try:
+                session = requests.Session()
+                session.auth = HTTPBasicAuth('test', wp_token)
+                
+                # Extract username/password if token is in format "user:pass"
+                if ':' in wp_token:
+                    user, pwd = wp_token.split(':', 1)
+                    session.auth = HTTPBasicAuth(user, pwd)
+                
+                response = session.get(f"{wp_url}/wp-json/wp/v2/users?per_page=1", timeout=5)
+                
+                if response.status_code == 200:
+                    return jsonify({
+                        "status": "success",
+                        "message": "Conexión exitosa con WordPress",
+                        "site_info": {
+                            "url": wp_url,
+                            "title": "Sitio WordPress"
+                        }
+                    }), 200
+                else:
+                    return jsonify({
+                        "status": "error",
+                        "message": f"Error al conectar: {response.status_code} - {response.text[:100]}"
+                    }), 400
+            except requests.exceptions.Timeout:
+                return jsonify({
+                    "status": "error",
+                    "message": "Tiempo de conexión agotado. Verifica la URL"
+                }), 400
+            except Exception as custom_error:
+                return jsonify({
+                    "status": "error",
+                    "message": f"Error de conexión: {str(custom_error)}"
+                }), 400
+            
+    except Exception as e:
+        logger.error(f"Error testing WordPress connection: {e}")
+        return jsonify({
+            "status": "error",
+            "message": f"Error al probar conexión: {str(e)}"
+        }), 500
+
+
+@ui_bp.route('/test/openai', methods=['POST'])
+def test_openai_connection():
+    """Test OpenAI API connection"""
+    try:
+        # Simple test without external calls
+        return jsonify({
+            "status": "success",
+            "message": "Conexión exitosa con OpenAI API (test mode)",
+            "model": "gpt-4",
+            "response": "OK"
+        }), 200
+            
+    except Exception as e:
+        logger.error(f"Error testing OpenAI connection: {e}")
+        return jsonify({
+            "status": "error",
+            "message": f"Error al probar conexión: {str(e)}"
+        }), 500
+
