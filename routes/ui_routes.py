@@ -364,8 +364,8 @@ def clear_logs():
 
 # === Enhanced Metrics ===
 
-@ui_bp.route('/metrics', methods=['GET'])
-def get_metrics():
+@ui_bp.route('/metrics/enhanced', methods=['GET'])
+def get_metrics_enhanced():
     """Get enhanced system metrics with trends"""
     try:
         from datetime import datetime, timedelta
