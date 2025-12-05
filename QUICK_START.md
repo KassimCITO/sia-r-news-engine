@@ -28,7 +28,49 @@ chmod +x run.sh
 docker-compose up --build
 ```
 
-## 2️⃣ Configuración Básica (2 minutos)
+## 2️⃣ Ejecutar Tests (Recomendado - Verificar que todo funciona)
+
+### Instalación de pytest (incluida en requirements.txt)
+
+```bash
+# Ejecutar todos los tests
+python -m pytest tests/ -v
+
+# O solo tests sin problemas de SQLAlchemy Python 3.13:
+python -m pytest tests/test_cleaner.py tests/test_tagger.py tests/test_wp_client.py -v
+```
+
+**Resultado esperado:** 15/15 tests PASSED (2.81 segundos)
+
+**Detalles de tests:**
+- `test_cleaner.py` — 7 tests de limpieza de texto (HTML, Unicode, whitespace, ruido)
+- `test_tagger.py` — 4 tests de extracción de tags y análisis de tono
+- `test_wp_client.py` — 4 tests de cliente WordPress
+
+### ⚠️ Nota: Python 3.13 y SQLAlchemy
+
+Si usas **Python 3.13** y ejecutas `pytest tests/` completo verás errores en:
+- `test_pipeline.py` — `AssertionError: Class SQLCoreOperations directly inherits TypingOnly...`
+- `test_ui.py` — Mismo error
+
+**Causa:** Issue de SQLAlchemy 2.0.x con Python 3.13.
+
+**Soluciones:**
+1. **Recomendado:** Usar Python 3.12 (estable)
+   ```bash
+   # Cambiar a Python 3.12 en tu sistema
+   python3.12 -m venv venv  # O usar pyenv, conda, etc.
+   ```
+2. Esperar a SQLAlchemy 2.2.0+ (próximas versiones)
+
+### Verificar tu versión de Python
+
+```bash
+python --version
+# Esperado: Python 3.10.x, 3.11.x, o 3.12.x
+```
+
+## 3️⃣ Configuración Básica (2 minutos)
 
 Editar el archivo `.env` con tus credenciales:
 

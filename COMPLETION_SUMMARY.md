@@ -15,6 +15,48 @@ Se ha implementado exitosamente una **interfaz web completa** para el sistema SI
 
 ---
 
+## ✅ Estado de Tests (4 de Diciembre de 2025)
+
+### Ejecución de Tests
+
+**Resultado:** ✅ **15/15 tests pasados correctamente**
+
+```
+Módulo                  Resultado     Detalles
+────────────────────────────────────────────────────────────
+test_cleaner.py         7/7 PASSED    Limpieza HTML, Unicode, whitespace, ruido, pipeline
+test_tagger.py          4/4 PASSED    Extracción tags, validación tono, estructura respuesta
+test_wp_client.py       4/4 PASSED    Inicialización, validación datos, archivos
+────────────────────────────────────────────────────────────
+Total:                 15/15 PASSED    Tiempo: 2.81 segundos
+```
+
+### Notas sobre Tests
+
+⚠️ **2 módulos con incompatibilidad SQLAlchemy + Python 3.13:**
+- `test_pipeline.py` — No se recopila (issue SQLAlchemy 2.0.x con Python 3.13)
+- `test_ui.py` — No se recopila (mismo issue)
+
+**Causa:** Issue conocido de SQLAlchemy con Python 3.13 (`TypingOnly` inheritance).
+
+**Solución:**
+- Usar **Python 3.12** (recomendado para desarrollo/testing)
+- O SQLAlchemy >= 2.2.0 en futuras versiones
+
+### Cambios en requirements.txt
+
+**Actualización realizada (4 de Diciembre):**
+```diff
+- SQLAlchemy==2.0.21
++ SQLAlchemy==2.1.1
+```
+
+**Razón:** Mejor compatibilidad con Python 3.13 para módulos que funcionan correctamente.
+
+---
+
+---
+
 ## 🏗️ Estructura del Proyecto
 
 ```

@@ -19,10 +19,25 @@ SIA-R es un sistema completo de inteligencia artificial para procesar, optimizar
 
 ## Requisitos
 
-- Python 3.10+
+- **Python 3.10 - 3.12** (Python 3.13 en desarrollo; ver nota sobre SQLAlchemy)
 - OpenAI API Key
 - WordPress con REST API habilitada
 - Docker y Docker Compose (opcional)
+
+### ⚠️ Nota: Python 3.13 y SQLAlchemy
+
+**Estado Actual:** Sistema compatible con Python 3.10-3.12. Python 3.13 requiere SQLAlchemy >= 2.1.1.
+
+**Problema:** SQLAlchemy 2.0.x tiene incompatibilidad con Python 3.13 (`TypingOnly` inheritance issue). Se ha actualizado `requirements.txt` a `SQLAlchemy==2.1.1` para soporte parcial.
+
+**Solución recomendada:**
+- Usar Python 3.12 (estable, sin problemas)
+- O esperar a SQLAlchemy 2.2.0+ (próximas versiones)
+
+**Verificar tu versión:**
+```bash
+python --version
+```
 
 ## Instalación
 
@@ -40,7 +55,8 @@ source venv/bin/activate  # En Windows: venv\Scripts\activate
 # Instalar dependencias
 pip install -r requirements.txt
 
-# Configurar variables de entorno
+# Ejecutar tests (asegurar que todo funciona)
+python -m pytest tests/ -v  # Ver QUICK_START.md para notas sobre Python 3.13
 cp .env.example .env
 # Editar .env con tus valores
 
