@@ -358,6 +358,85 @@ Debe:
 * `/api/wp/taxonomies`
 * `/api/wp/rebuild-taxonomy-profiles`
 
+## Interfaz visual local — UI / Dashboard (localhost:8000)
+
+### Resumen
+
+El sistema debe exponer una interfaz web en `http://localhost:8000` (puerto configurable) que permita a editores y administradores operar el pipeline, revisar artículos y controlar la publicación automática. Usar Flask + templates Jinja2 + Bootstrap 5. La UI debe integrarse con autenticación y API Key.
+
+### Páginas / Vistas necesarias
+
+1. `/` — Página de estado (mini dashboard)
+2. `/login` — Login
+3. `/dashboard` — Lista de items en revisión
+4. `/review/view/<id>` — Vista de revisión con comparador
+5. `/pipeline/run` — Ejecutar pipeline manualmente
+6. `/published` — Artículos publicados vía SIA-R
+7. `/settings` — Configuración (admin)
+8. `/logs` — Logs del pipeline
+9. `/metrics` — Gráficos estadísticos
+
+### Endpoints REST adicionales
+
+* `GET /api/ui/status`
+* `GET /api/ui/reviews?status=pending`
+* `GET /api/ui/review/<id>`
+* `POST /api/ui/review/<id>/approve`
+* `POST /api/ui/review/<id>/reject`
+* `POST /api/ui/run`
+* `GET /api/ui/published`
+* `GET /api/ui/settings`
+* `POST /api/ui/settings`
+
+### Controles de Auto-Publicación
+
+Parámetros clave:
+
+* `min_veracity_to_auto_publish`
+* `max_risk_to_auto_publish`
+* `allow_auto_publish_categories`
+* `require_editor_for_sensitive_topics`
+
+### Previsualización
+
+Generar vista HTML local y opción de draft en WordPress.
+
+### Seguridad / Roles
+
+* `editor`: revisar y aprobar
+* `admin`: manejar configuración y API keys
+
+### Notas técnicas
+
+* Templates en `templates/`
+* CSS en `static/css/`
+* JS en `static/js/`
+* Protección CSRF
+
+### Workflow UI + pipeline
+
+1. Se ejecuta pipeline
+2. Auto-publish o envío a revisión
+3. Editor revisa y aprueba/rechaza
+4. Publicación final en WordPress
+
+### Requisitos UX
+
+* Modo oscuro
+* Tabla paginada
+* Filtros y búsqueda
+
+### Pruebas UI
+
+* Tests end-to-end con `pytest` y `requests`
+
+### Salida esperada
+
+* Archivos HTML en `templates/`
+* Endpoints para UI
+* JS para interacción
+* Documentación en `docs/manual_usuario.md`
+
 ---
 
 # 8. **Base de Datos**

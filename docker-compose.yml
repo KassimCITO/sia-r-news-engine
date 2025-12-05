@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sia-r-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - WP_BASE_URL=${WP_BASE_URL}
+      - WP_USERNAME=${WP_USERNAME}
+      - WP_PASSWORD=${WP_PASSWORD}
+      - DB_URL=sqlite:///./sia_r.db
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - sia-network
+
+networks:
+  sia-network:
+    driver: bridge
+
+volumes:
+  data:
+  logs:

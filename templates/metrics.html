@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}Métricas y Estadísticas - SIA-R{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1><i class="bi bi-graph-up"></i> Métricas y Estadísticas</h1>
+        <p class="text-muted">Análisis del rendimiento del pipeline</p>
+        <hr>
+    </div>
+</div>
+
+<!-- Time Range Selector -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="period" id="period-7d" value="7d" checked onchange="loadMetrics()">
+                    <label class="btn btn-outline-primary" for="period-7d">Últimos 7 días</label>
+                    
+                    <input type="radio" class="btn-check" name="period" id="period-30d" value="30d" onchange="loadMetrics()">
+                    <label class="btn btn-outline-primary" for="period-30d">Últimos 30 días</label>
+                    
+                    <input type="radio" class="btn-check" name="period" id="period-90d" value="90d" onchange="loadMetrics()">
+                    <label class="btn btn-outline-primary" for="period-90d">Últimos 90 días</label>
+                    
+                    <input type="radio" class="btn-check" name="period" id="period-all" value="all" onchange="loadMetrics()">
+                    <label class="btn btn-outline-primary" for="period-all">Todo el tiempo</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Metrics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Artículos Procesados</h6>
+                <h2 id="total-processed">0</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Tasa de Éxito</h6>
+                <h2 id="success-rate">0%</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Calidad Promedio</h6>
+                <h2 id="avg-quality">0%</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Tiempo Promedio</h6>
+                <h2 id="avg-time">0 ms</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Artículos por Categoría</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Calidad por Categoría</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="qualityChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Tendencia de Procesamiento</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Categories -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Top Categorías</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Categoría</th>
+                            <th>Artículos</th>
+                            <th>% Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="top-categories">
+                        <tr><td colspan="3">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Problemas Comunes</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Problema</th>
+                            <th>Frecuencia</th>
+                            <th>%</th>
+                        </tr>
+                    </thead>
+                    <tbody id="common-issues">
+                        <tr><td colspan="3">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load Chart.js if not already loaded -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+let categoryChart, qualityChart, trendChart;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadMetrics();
+});
+
+function getPeriod() {
+    const selected = document.querySelector('input[name="period"]:checked');
+    return selected ? selected.value : '7d';
+}
+
+function loadMetrics() {
+    const period = getPeriod();
+    
+    fetch(`/api/ui/metrics?period=${period}`, {
+        headers: {
+            'Authorization': 'Bearer ' + getToken()
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.metrics) {
+            displayMetrics(data.metrics);
+        }
+    });
+}
+
+function displayMetrics(metrics) {
+    // Update summary stats
+    document.getElementById('total-processed').textContent = metrics.total_processed || 0;
+    document.getElementById('success-rate').textContent = (metrics.success_rate * 100).toFixed(1) + '%';
+    document.getElementById('avg-quality').textContent = (metrics.avg_quality * 100).toFixed(1) + '%';
+    document.getElementById('avg-time').textContent = metrics.avg_execution_time.toFixed(0) + ' ms';
+    
+    // Update top categories table
+    const topCatBody = document.getElementById('top-categories');
+    topCatBody.innerHTML = (metrics.top_categories || []).map(cat => `
+        <tr>
+            <td>${cat.name}</td>
+            <td>${cat.count}</td>
+            <td>${(cat.percentage * 100).toFixed(1)}%</td>
+        </tr>
+    `).join('') || '<tr><td colspan="3">Sin datos</td></tr>';
+    
+    // Update common issues table
+    const issuesBody = document.getElementById('common-issues');
+    issuesBody.innerHTML = (metrics.common_issues || []).map(issue => `
+        <tr>
+            <td>${issue.name}</td>
+            <td>${issue.count}</td>
+            <td>${(issue.percentage * 100).toFixed(1)}%</td>
+        </tr>
+    `).join('') || '<tr><td colspan="3">Sin problemas detectados</td></tr>';
+    
+    // Create charts
+    createCharts(metrics);
+}
+
+function createCharts(metrics) {
+    const ctx1 = document.getElementById('categoryChart').getContext('2d');
+    const ctx2 = document.getElementById('qualityChart').getContext('2d');
+    const ctx3 = document.getElementById('trendChart').getContext('2d');
+    
+    // Destroy existing charts
+    if (categoryChart) categoryChart.destroy();
+    if (qualityChart) qualityChart.destroy();
+    if (trendChart) trendChart.destroy();
+    
+    // Category Distribution
+    const categories = metrics.top_categories || [];
+    categoryChart = new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+            labels: categories.map(c => c.name),
+            datasets: [{
+                data: categories.map(c => c.count),
+                backgroundColor: [
+                    '#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    // Quality by Category
+    qualityChart = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: categories.map(c => c.name),
+            datasets: [{
+                label: 'Calidad Promedio',
+                data: categories.map(c => (c.avg_quality * 100).toFixed(1)),
+                backgroundColor: '#28a745'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+    
+    // Trend
+    const trend = metrics.daily_trend || [];
+    trendChart = new Chart(ctx3, {
+        type: 'line',
+        data: {
+            labels: trend.map(t => t.date),
+            datasets: [{
+                label: 'Artículos Procesados',
+                data: trend.map(t => t.count),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            }
+        }
+    });
+}
+
+function getToken() {
+    return localStorage.getItem('auth_token') || '';
+}
+</script>
+{% endblock %}

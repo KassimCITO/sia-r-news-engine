@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SIA-R{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+        <hr>
+    </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h6 class="card-title">Artículos Procesados</h6>
+                <h2 id="total-articles">-</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h6 class="card-title">Tasa Éxito</h6>
+                <h2 id="success-rate">-</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h6 class="card-title">En Revisión</h6>
+                <h2 id="pending-count">-</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h6 class="card-title">Publicados</h6>
+                <h2 id="published-count">-</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Acciones Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <a href="/pipeline/run" class="btn btn-primary">
+                    <i class="bi bi-play-circle"></i> Ejecutar Pipeline
+                </a>
+                <a href="/dashboard?tab=pending" class="btn btn-warning">
+                    <i class="bi bi-clock"></i> Ver en Revisión
+                </a>
+                <a href="/published" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Ver Publicados
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Items Table -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Artículos Recientes en Revisión</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="articles-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Vista Previa</th>
+                                <th>Calidad</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="articles-body">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    <i class="bi bi-hourglass-split"></i> Cargando...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardStats();
+    loadRecentArticles();
+});
+
+function loadDashboardStats() {
+    fetch('/api/ui/status', {
+        headers: {
+            'Authorization': 'Bearer ' + getToken()
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.stats) {
+            document.getElementById('total-articles').textContent = data.stats.total_runs || 0;
+            document.getElementById('success-rate').textContent = 
+                (data.stats.success_rate * 100).toFixed(1) + '%' || '0%';
+            document.getElementById('pending-count').textContent = data.pending_reviews || 0;
+        }
+    });
+}
+
+function loadRecentArticles() {
+    fetch('/api/ui/reviews?status=pending&limit=10', {
+        headers: {
+            'Authorization': 'Bearer ' + getToken()
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const tbody = document.getElementById('articles-body');
+        tbody.innerHTML = '';
+        
+        if (data.reviews && data.reviews.length > 0) {
+            data.reviews.forEach(review => {
+                const row = `
+                    <tr>
+                        <td>${review.id}</td>
+                        <td>${review.preview_text}</td>
+                        <td>
+                            <span class="badge bg-${getQualityBadge(review.quality_score)}">
+                                ${(review.quality_score * 100).toFixed(0)}%
+                            </span>
+                        </td>
+                        <td><span class="badge bg-warning">En Revisión</span></td>
+                        <td>${new Date(review.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <a href="/review/view/${review.id}" class="btn btn-sm btn-primary">Ver</a>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay artículos en revisión</td></tr>';
+        }
+    });
+}
+
+function getQualityBadge(score) {
+    if (score >= 0.85) return 'success';
+    if (score >= 0.70) return 'info';
+    if (score >= 0.50) return 'warning';
+    return 'danger';
+}
+
+function getToken() {
+    return localStorage.getItem('auth_token') || '';
+}
+</script>
+{% endblock %}

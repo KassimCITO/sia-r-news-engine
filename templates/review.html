@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Revisar Artículo - SIA-R{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <a href="/dashboard" class="btn btn-secondary mb-3">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <h1><i class="bi bi-eye"></i> Revisión de Artículo</h1>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Left Panel: Review Info -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Contenido del Artículo</h5>
+                    <span class="badge bg-primary" id="quality-badge">-</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <h4 id="article-title">-</h4>
+                <div id="article-content" class="border p-3 rounded" style="min-height: 300px; max-height: 500px; overflow-y: auto;">
+                    -
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Métricas del Pipeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <p class="text-muted small">Calidad Narrativa</p>
+                        <h5 id="metric-narrative">-</h5>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="text-muted small">Riesgo Factualidad</p>
+                        <h5 id="metric-risk">-</h5>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="text-muted small">Puntuación SEO</p>
+                        <h5 id="metric-seo">-</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel: Actions -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Información</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>ID:</strong> <span id="review-id">-</span></p>
+                <p><strong>Estado:</strong> <span id="review-status" class="badge bg-warning">En Revisión</span></p>
+                <p><strong>Creado:</strong> <span id="review-date">-</span></p>
+                <p><strong>Tiempo Ejecución:</strong> <span id="review-time">-</span>ms</p>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Acciones</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-success w-100 mb-2" onclick="approveReview()">
+                    <i class="bi bi-check-circle"></i> Aprobar
+                </button>
+                <button class="btn btn-danger w-100 mb-2" onclick="showRejectForm()">
+                    <i class="bi bi-x-circle"></i> Rechazar
+                </button>
+                <a href="#" class="btn btn-info w-100">
+                    <i class="bi bi-eye"></i> Vista Previa
+                </a>
+            </div>
+        </div>
+
+        <!-- Categories & Tags -->
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Categorías</h5>
+            </div>
+            <div class="card-body">
+                <div id="categories-list">
+                    <span class="text-muted">Cargando...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Tags</h5>
+            </div>
+            <div class="card-body">
+                <div id="tags-list">
+                    <span class="text-muted">Cargando...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rechazar Artículo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label for="reject-reason" class="form-label">Razón del rechazo</label>
+                <textarea class="form-control" id="reject-reason" rows="4"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="submitReject()">Rechazar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentReviewId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    currentReviewId = window.location.pathname.split('/').pop();
+    loadReview(currentReviewId);
+});
+
+function loadReview(reviewId) {
+    fetch(`/api/ui/review/${reviewId}`, {
+        headers: {
+            'Authorization': 'Bearer ' + getToken()
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.review) {
+            displayReview(data.review);
+        }
+    });
+}
+
+function displayReview(review) {
+    document.getElementById('review-id').textContent = review.id;
+    document.getElementById('article-title').textContent = review.preview_text || 'Sin título';
+    document.getElementById('article-content').textContent = review.preview_text || 'Sin contenido';
+    document.getElementById('review-date').textContent = new Date(review.created_at).toLocaleString();
+    document.getElementById('review-time').textContent = review.execution_time.toFixed(2);
+    
+    const qualityScore = review.quality_score;
+    document.getElementById('quality-badge').textContent = (qualityScore * 100).toFixed(0) + '%';
+    document.getElementById('quality-badge').className = `badge bg-${getQualityBadge(qualityScore)}`;
+}
+
+function approveReview() {
+    if (!confirm('¿Estás seguro de que deseas aprobar este artículo?')) return;
+    
+    fetch(`/api/ui/review/${currentReviewId}/approve`, {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + getToken()
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Artículo aprobado');
+            window.location.href = '/dashboard';
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function showRejectForm() {
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+}
+
+function submitReject() {
+    const reason = document.getElementById('reject-reason').value;
+    
+    if (!reason.trim()) {
+        alert('Por favor ingresa una razón');
+        return;
+    }
+    
+    fetch(`/api/ui/review/${currentReviewId}/reject`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getToken()
+        },
+        body: JSON.stringify({ reason })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Artículo rechazado');
+            window.location.href = '/dashboard';
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function getToken() {
+    return localStorage.getItem('auth_token') || '';
+}
+
+function getQualityBadge(score) {
+    if (score >= 0.85) return 'success';
+    if (score >= 0.70) return 'info';
+    if (score >= 0.50) return 'warning';
+    return 'danger';
+}
+</script>
+{% endblock %}
