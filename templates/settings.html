@@ -249,6 +249,9 @@
                         <button type="button" class="btn btn-primary" onclick="testOpenAIConnection()">
                             <i class="bi bi-plug"></i> Probar Conexión
                         </button>
+                        <button type="button" class="btn btn-primary" onclick="saveIntegrationSettings()">
+                            <i class="bi bi-save"></i> Guardar Configuración
+                        </button>
                     </div>
                 </div>
             </div>
@@ -272,6 +275,7 @@ function updateValue(type) {
 }
 
 function loadSettings() {
+    // Load general settings
     fetch('/api/ui/settings', {
         headers: {
             'Authorization': 'Bearer ' + getToken()
@@ -290,6 +294,34 @@ function loadSettings() {
             updateValue('risk');
             updateValue('seo');
         }
+    })
+    .catch(error => {
+        console.error('Error loading settings:', error);
+        showToast('Error', 'No se pudieron cargar las configuraciones', 'error');
+    });
+
+    // Load integration settings
+    fetch('/api/ui/settings/integrations', {
+        headers: {
+            'Authorization': 'Bearer ' + getToken()
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.settings) {
+            const integrations = data.settings;
+            if (integrations.wordpress) {
+                document.getElementById('wp-url').value = integrations.wordpress.url || '';
+                document.getElementById('wp-token').value = integrations.wordpress.token || '';
+            }
+            if (integrations.openai) {
+                document.getElementById('openai-key').value = integrations.openai.api_key || '';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error loading settings:', error);
+        showToast('Error', 'No se pudieron cargar las configuraciones', 'error');
     });
 }
 
@@ -332,6 +364,9 @@ function saveNotifications() {
 }
 
 function testWPConnection() {
+    // Save settings first
+    saveIntegrationSettings();
+
     const wpUrl = document.getElementById('wp-url').value.trim();
     const wpToken = document.getElementById('wp-token').value.trim();
     
@@ -374,6 +409,9 @@ function testWPConnection() {
 }
 
 function testOpenAIConnection() {
+    // Save settings first
+    saveIntegrationSettings();
+
     const openaiKey = document.getElementById('openai-key').value.trim();
     
     if (!openaiKey) {
@@ -473,6 +511,42 @@ function testOpenAIConnection() {
 
     // start
     doTest();
+}
+
+function saveIntegrationSettings() {
+    const wpUrl = document.getElementById('wp-url').value.trim();
+    const wpToken = document.getElementById('wp-token').value.trim();
+    const openaiKey = document.getElementById('openai-key').value.trim();
+
+    const settings = {
+        wordpress: {
+            url: wpUrl,
+            token: wpToken
+        },
+        openai: {
+            api_key: openaiKey
+        }
+    };
+
+    fetch('/api/ui/settings/integrations', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getToken()
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('Éxito', 'Configuración de integraciones guardada', 'success');
+        } else {
+            showToast('Error', 'Error al guardar la configuración: ' + (data.error || 'Error desconocido'), 'error');
+        }
+    })
+    .catch(err => {
+        showToast('Error', 'Error de conexión: ' + err.message, 'error');
+    });
 }
 
 function showToast(title, message, type = 'info') {
