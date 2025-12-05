@@ -549,13 +549,83 @@ def test_wordpress_connection():
 def test_openai_connection():
     """Test OpenAI API connection"""
     try:
-        # Simple test without external calls
-        return jsonify({
-            "status": "success",
-            "message": "Conexión exitosa con OpenAI API (test mode)",
-            "model": "gpt-4",
-            "response": "OK"
-        }), 200
+        import os
+        import http.client
+        import json as json_lib
+        
+        data = request.get_json() or {}
+        api_key = data.get('api_key', '').strip()
+        
+        # If no key provided, use default config
+        if not api_key:
+            api_key = os.getenv("OPENAI_API_KEY", "")
+            
+            if not api_key:
+                return jsonify({
+                    "status": "error",
+                    "message": "No hay clave de API configurada"
+                }), 400
+        
+        try:
+            # Test OpenAI connection with http.client
+            conn = http.client.HTTPSConnection("api.openai.com")
+            
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "model": "gpt-3.5-turbo",  # Use cheaper model for testing
+                "messages": [
+                    {"role": "system", "content": "You are a test assistant"},
+                    {"role": "user", "content": "Reply with only 'OK'"}
+                ],
+                "max_tokens": 5
+            }
+            
+            conn.request("POST", "/v1/chat/completions", json_lib.dumps(payload), headers)
+            response = conn.getresponse()
+            response_data = response.read().decode()
+            
+            if response.status == 200:
+                parsed = json_lib.loads(response_data)
+                message = parsed.get('choices', [{}])[0].get('message', {}).get('content', '')
+                return jsonify({
+                    "status": "success",
+                    "message": "Conexión exitosa con OpenAI API",
+                    "model": "gpt-3.5-turbo",
+                    "response": message[:50]
+                }), 200
+            else:
+                try:
+                    error_data = json_lib.loads(response_data)
+                    error_msg = error_data.get('error', {}).get('message', response_data)
+                except:
+                    error_msg = response_data
+                
+                if response.status == 401:
+                    message = "Clave de API inválida o incorrecta"
+                elif response.status == 429:
+                    message = "Límite de velocidad excedido. Intenta nuevamente en unos minutos"
+                elif response.status == 404:
+                    message = "Modelo no disponible o endpoint no existe"
+                else:
+                    message = f"Error {response.status}: {error_msg[:100]}"
+                
+                logger.error(f"OpenAI API error: {error_msg}")
+                return jsonify({
+                    "status": "error",
+                    "message": message
+                }), 400
+                
+        except Exception as llm_error:
+            error_msg = str(llm_error)
+            logger.error(f"OpenAI test error: {error_msg}")
+            return jsonify({
+                "status": "error",
+                "message": f"Error de conexión: {error_msg[:100]}"
+            }), 400
             
     except Exception as e:
         logger.error(f"Error testing OpenAI connection: {e}")

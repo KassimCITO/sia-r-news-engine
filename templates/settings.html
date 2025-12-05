@@ -386,31 +386,93 @@ function testOpenAIConnection() {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Probando...';
     
-    fetch('/api/ui/test/openai', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + getToken()
-        },
-        body: JSON.stringify({
-            api_key: openaiKey
-        })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.status === 'success') {
-            showToast('Éxito', `✓ ${data.message}\nModelo: ${data.model}`, 'success');
-        } else {
-            showToast('Error', `✗ ${data.message}`, 'error');
+    const maxRetries = 3;
+    let attempt = 0;
+    let baseDelay = 1000; // ms
+
+    const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+    async function doTest() {
+        attempt++;
+        showToast('Info', `Intentando conexión OpenAI (intento ${attempt}/${maxRetries})`, 'info');
+
+        try {
+            const resp = await fetch('/api/ui/test/openai', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + getToken()
+                },
+                body: JSON.stringify({ api_key: openaiKey })
+            });
+
+            const data = await resp.json().catch(() => ({}));
+
+            if (resp.status === 200 && data.status === 'success') {
+                showToast('Éxito', `✓ ${data.message}\nModelo: ${data.model}`, 'success');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                return;
+            }
+
+            // Rate limit handling
+            if (resp.status === 429) {
+                const retryAfter = data.retry_after || data.retry_after_seconds || null;
+                const waitSec = retryAfter ? Number(retryAfter) : Math.round((baseDelay * Math.pow(2, attempt-1))/1000);
+                showToast('Atención', `Límite excedido. Reintentando en ${waitSec}s... (intento ${attempt}/${maxRetries})`, 'info');
+
+                if (attempt < maxRetries) {
+                    // small jitter
+                    const jitter = Math.floor(Math.random() * 500);
+                    await sleep((waitSec * 1000) + jitter);
+                    return doTest();
+                }
+
+                // Exhausted retries
+                const toast = showToast('Error', `Se alcanzó el límite de intentos por límite de velocidad.`, 'error');
+                addRetryButtonToToast(toast, doTest);
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                return;
+            }
+
+            // Other errors
+            const message = data && data.message ? data.message : `Error en la petición (status ${resp.status})`;
+            const toast = showToast('Error', `✗ ${message}`, 'error');
+            addRetryButtonToToast(toast, doTest);
+
+        } catch (err) {
+            const toast = showToast('Error', `✗ Error de conexión: ${err.message}`, 'error');
+            addRetryButtonToToast(toast, doTest);
+        } finally {
+            if (attempt >= maxRetries) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         }
-    })
-    .catch(err => {
-        showToast('Error', `✗ Error de conexión: ${err.message}`, 'error');
-    })
-    .finally(() => {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-    });
+    }
+
+    function addRetryButtonToToast(toastElem, retryFn) {
+        try {
+            const btnRetry = document.createElement('button');
+            btnRetry.className = 'btn btn-sm btn-outline-dark ms-2';
+            btnRetry.textContent = 'Reintentar';
+            btnRetry.onclick = function(e) {
+                e.preventDefault();
+                toastElem.remove();
+                attempt = 0; // reset attempts for manual retry
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Probando...';
+                retryFn();
+            };
+            toastElem.appendChild(btnRetry);
+        } catch (e) {
+            console.warn('No se pudo añadir botón de reintento al toast', e);
+        }
+    }
+
+    // start
+    doTest();
 }
 
 function showToast(title, message, type = 'info') {
