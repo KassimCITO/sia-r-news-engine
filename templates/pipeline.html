@@ -28,6 +28,17 @@
                         </div>
                     </div>
                 </div>
+                <!-- Trends for quick prefill -->
+                <div class="mb-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Tendencias (Google Trends)</h6>
+                        </div>
+                        <div class="card-body" id="pipeline-trends-list">
+                            <div class="text-muted">Cargando tendencias...</div>
+                        </div>
+                    </div>
+                </div>
                 <form id="pipeline-form" onsubmit="runPipeline(event)">
                     <!-- Title -->
                     <div class="mb-3">
@@ -334,6 +345,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     } catch (err) {
         console.error('Error prefilling pipeline from trend', err);
+    }
+    // Load live trends into the pipeline side list (non-blocking)
+    if (typeof loadTrendsForPipeline === 'function') {
+        loadTrendsForPipeline(10);
     }
 });
 </script>

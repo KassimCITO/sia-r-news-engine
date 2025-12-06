@@ -671,6 +671,112 @@ function selectTrendJson(jsonPayload) {
 }
 
 /**
+ * Load trends specifically for the pipeline page and render as a selectable list.
+ */
+async function loadTrendsForPipeline(limit = 8) {
+    try {
+        const resp = await fetch(`/api/ui/trends?live=1&limit=${limit}`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        const data = await resp.json();
+
+        const container = document.getElementById('pipeline-trends-list');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (!data || !data.trends || data.trends.length === 0) {
+            container.innerHTML = '<div class="text-muted">No se encontraron tendencias</div>';
+            return;
+        }
+
+        const table = document.createElement('table');
+        table.className = 'table table-hover';
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Título</th>
+                    <th>Fuente</th>
+                    <th>Categoría</th>
+                    <th>Score</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        `;
+
+        const tbody = table.querySelector('tbody');
+
+        data.trends.forEach(tr => {
+            const trEl = document.createElement('tr');
+            trEl.innerHTML = `
+                <td class="align-middle">${escapeHtml(tr.title)}</td>
+                <td class="align-middle"><small class="text-muted">${escapeHtml(tr.source)}</small></td>
+                <td class="align-middle">${escapeHtml(tr.category || '')}</td>
+                <td class="align-middle"><span class="badge bg-primary">${tr.score}</span></td>
+                <td class="align-middle text-end"><button class="btn btn-sm btn-outline-primary">Cargar</button></td>
+            `;
+
+            // clicking row also applies trend
+            trEl.addEventListener('click', function (ev) {
+                // avoid double handling when clicking button
+                if (ev.target && ev.target.tagName.toLowerCase() === 'button') return;
+                applyTrendToPipeline(tr);
+            });
+
+            const btn = trEl.querySelector('button');
+            btn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                applyTrendToPipeline(tr);
+            });
+
+            tbody.appendChild(trEl);
+        });
+
+        container.appendChild(table);
+
+    } catch (err) {
+        console.error('Error loading pipeline trends', err);
+        const container = document.getElementById('pipeline-trends-list');
+        if (container) container.innerHTML = '<div class="text-danger">Error cargando tendencias</div>';
+    }
+}
+
+/**
+ * Apply a trend object to the pipeline form fields without navigating.
+ */
+function applyTrendToPipeline(trend) {
+    try {
+        const titleEl = document.getElementById('article-title');
+        const contentEl = document.getElementById('article-content');
+        const categoryEl = document.getElementById('article-category');
+        const urlEl = document.getElementById('article-url');
+
+        if (titleEl) titleEl.value = trend.title || titleEl.value;
+        if (contentEl) contentEl.value = (trend.summary ? trend.summary + '\n\nFuente: ' + (trend.source || '') : '') || contentEl.value;
+        if (categoryEl && trend.category) {
+            const opt = Array.from(categoryEl.options).find(o => o.value === trend.category);
+            if (opt) categoryEl.value = trend.category;
+        }
+        if (urlEl && trend.url) urlEl.value = trend.url;
+
+        // store selection for later reference
+        localStorage.setItem('selected_trend', JSON.stringify(trend));
+
+        // show banner
+        const banner = document.getElementById('selected-trend-banner');
+        const bannerText = document.getElementById('selected-trend-text');
+        if (banner && bannerText) {
+            bannerText.textContent = `Tendencia precargada: ${trend.title} (${trend.source})`;
+            banner.style.display = 'block';
+        }
+
+        showToast(`Tendencia cargada en formulario: ${trend.title}`, 'success');
+    } catch (err) {
+        console.error('Error applying trend to pipeline', err);
+        showToast('No se pudo cargar la tendencia en el formulario', 'danger');
+    }
+}
+
+/**
  * Escapes HTML to avoid injection in inserted strings
  */
 function escapeHtml(unsafe) {
