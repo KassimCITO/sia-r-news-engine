@@ -566,23 +566,42 @@ async function loadTrends() {
         data.trends.forEach(tr => {
             const card = document.createElement('div');
             card.className = 'trend-card';
-            card.innerHTML = `
-                <div class="trend-card-inner">
-                    <div class="trend-header">
-                        <h6 class="mb-1">${escapeHtml(tr.title)}</h6>
-                        <small class="text-muted">${tr.source} · ${tr.category}</small>
-                    </div>
-                    <p class="trend-summary text-truncate">${escapeHtml(tr.summary)}</p>
-                    <div class="trend-meta d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="badge bg-primary">Score ${tr.score}</span>
-                        </div>
-                        <div>
-                            <button class="btn btn-sm btn-outline-success" onclick="selectTrend(${tr.id}, '${escapeJs(tr.title)}')">Seleccionar</button>
-                        </div>
-                    </div>
-                </div>
-            `;
+
+            // create inner structure
+            const inner = document.createElement('div');
+            inner.className = 'trend-card-inner';
+
+            const header = document.createElement('div');
+            header.className = 'trend-header';
+            header.innerHTML = `<h6 class="mb-1">${escapeHtml(tr.title)}</h6><small class="text-muted">${tr.source} · ${tr.category}</small>`;
+
+            const summary = document.createElement('p');
+            summary.className = 'trend-summary text-truncate';
+            summary.textContent = tr.summary || '';
+
+            const meta = document.createElement('div');
+            meta.className = 'trend-meta d-flex justify-content-between align-items-center';
+
+            const scoreDiv = document.createElement('div');
+            scoreDiv.innerHTML = `<span class="badge bg-primary">Score ${tr.score}</span>`;
+
+            const actionDiv = document.createElement('div');
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-sm btn-outline-success';
+            btn.textContent = 'Seleccionar';
+            // attach full trend payload to onclick using encodeURIComponent to be safe
+            const payload = encodeURIComponent(JSON.stringify(tr));
+            btn.setAttribute('onclick', `selectTrendJson(decodeURIComponent('${payload}'))`);
+
+            actionDiv.appendChild(btn);
+            meta.appendChild(scoreDiv);
+            meta.appendChild(actionDiv);
+
+            inner.appendChild(header);
+            inner.appendChild(summary);
+            inner.appendChild(meta);
+            card.appendChild(inner);
+
             container.appendChild(card);
         });
 
@@ -595,10 +614,21 @@ async function loadTrends() {
 /**
  * Select a trend (placeholder action)
  */
-function selectTrend(id, title) {
-    // For now just show feedback; later wire to pipeline prefill
-    showToast(`Tendencia seleccionada: ${title}`, 'success');
-    console.log('Trend selected', id, title);
+/**
+ * Select trend from JSON payload (string) - save and redirect to pipeline
+ */
+function selectTrendJson(jsonPayload) {
+    try {
+        const trend = typeof jsonPayload === 'string' ? JSON.parse(jsonPayload) : jsonPayload;
+        // Save to localStorage for pipeline prefill
+        localStorage.setItem('selected_trend', JSON.stringify(trend));
+        showToast(`Tendencia seleccionada: ${trend.title}`, 'success');
+        // Redirect to pipeline run page where fields will be prefilled
+        window.location.href = '/pipeline/run';
+    } catch (err) {
+        console.error('Error selecting trend', err);
+        showToast('No se pudo seleccionar la tendencia', 'danger');
+    }
 }
 
 /**

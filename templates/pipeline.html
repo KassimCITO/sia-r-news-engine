@@ -20,6 +20,14 @@
                 <h5 class="mb-0">Configuración de Ejecución</h5>
             </div>
             <div class="card-body">
+                <div id="selected-trend-banner" class="mb-3" style="display:none;">
+                    <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
+                        <div id="selected-trend-text">Tendencia seleccionada</div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-light me-2" id="clear-trend-btn">Borrar</button>
+                        </div>
+                    </div>
+                </div>
                 <form id="pipeline-form" onsubmit="runPipeline(event)">
                     <!-- Title -->
                     <div class="mb-3">
@@ -282,5 +290,51 @@ function savePipeline() {
 function getToken() {
     return localStorage.getItem('auth_token') || '';
 }
+
+// Prefill fields if a selected trend exists in localStorage
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const sel = localStorage.getItem('selected_trend');
+        if (!sel) return;
+
+        const trend = JSON.parse(sel);
+        if (!trend) return;
+
+        // Prefill title and content fields
+        const titleEl = document.getElementById('article-title');
+        const contentEl = document.getElementById('article-content');
+        const categoryEl = document.getElementById('article-category');
+
+        if (titleEl && !titleEl.value) titleEl.value = trend.title || '';
+        if (contentEl && !contentEl.value) {
+            // Use summary as starter content; keep editable
+            contentEl.value = (trend.summary ? trend.summary + "\n\nFuente: " + (trend.source || '') : '') || '';
+        }
+        if (categoryEl && trend.category) {
+            const opt = Array.from(categoryEl.options).find(o => o.value === trend.category);
+            if (opt) categoryEl.value = trend.category;
+        }
+
+        // Show banner
+        const banner = document.getElementById('selected-trend-banner');
+        const bannerText = document.getElementById('selected-trend-text');
+        const clearBtn = document.getElementById('clear-trend-btn');
+        if (banner && bannerText) {
+            bannerText.textContent = `Tendencia precargada: ${trend.title} (${trend.source})`;
+            banner.style.display = 'block';
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                localStorage.removeItem('selected_trend');
+                if (banner) banner.style.display = 'none';
+                showToast('Selección eliminada', 'info');
+            });
+        }
+
+    } catch (err) {
+        console.error('Error prefilling pipeline from trend', err);
+    }
+});
 </script>
 {% endblock %}

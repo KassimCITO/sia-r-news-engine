@@ -500,10 +500,23 @@ def get_metrics_enhanced():
 # === Trends (mock) ===
 @ui_bp.route('/trends', methods=['GET'])
 def get_trends():
-    """Return a list of trending events (mock data for UI)."""
+    """Return trending events; try live Google Trends when requested, otherwise return mock data."""
     try:
-        from datetime import datetime, timedelta
+        # Query parameters
+        live = request.args.get('live', '0') in ['1', 'true', 'yes']
+        limit = int(request.args.get('limit', 10) or 10)
+        geo = request.args.get('geo', 'global')
 
+        if live:
+            try:
+                from services.trends_service import TrendsService
+                trends = TrendsService.fetch_google_trends(limit=limit, geo=geo)
+                return jsonify({"status": "success", "trends": trends}), 200
+            except Exception as live_err:
+                logger.warning(f"Live trends failed, falling back to mock: {live_err}")
+
+        # Fallback mock data (keeps previous structure)
+        from datetime import datetime, timedelta
         now = datetime.utcnow()
 
         sample_trends = [
@@ -545,10 +558,7 @@ def get_trends():
             }
         ]
 
-        return jsonify({
-            "status": "success",
-            "trends": sample_trends
-        }), 200
+        return jsonify({"status": "success", "trends": sample_trends}), 200
     except Exception as e:
         logger.error(f"Error getting trends: {e}")
         return jsonify({"error": str(e)}), 500
