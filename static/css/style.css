@@ -503,3 +503,26 @@ footer a:hover {
 [data-bs-theme="dark"] ::-webkit-scrollbar-thumb {
     background: #666;
 }
+
+/* Theme Toggle Button */
+#theme-icon {
+    font-size: 1.2rem;
+    transition: transform 0.3s ease;
+}
+
+[data-bs-theme="light"] #theme-icon::before {
+    content: '';
+}
+
+[data-bs-theme="dark"] #theme-icon {
+    transform: rotate(180deg);
+}
+
+.nav-link:hover #theme-icon {
+    transform: scale(1.1) rotate(var(--icon-rotate, 0deg));
+}
+
+[data-bs-theme="dark"] .nav-link:hover #theme-icon {
+    transform: scale(1.1) rotate(180deg);
+}
+
