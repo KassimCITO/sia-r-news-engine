@@ -587,29 +587,44 @@ async function loadTrends() {
 
             const actionDiv = document.createElement('div');
 
-            // Primary: Select and redirect to pipeline (saves selection and navigates)
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-sm btn-outline-success';
-            btn.textContent = 'Seleccionar';
-            btn.addEventListener('click', function () {
+            // Create Bootstrap split-button group: primary action + dropdown fallback
+            const group = document.createElement('div');
+            group.className = 'btn-group';
+
+            const primary = document.createElement('button');
+            primary.className = 'btn btn-sm btn-outline-success';
+            primary.textContent = 'Seleccionar';
+            primary.addEventListener('click', function () {
                 selectTrendJson(JSON.stringify(tr));
             });
 
-            // Secondary: Open pipeline in new tab (fallback)
-            const btnOpen = document.createElement('button');
-            btnOpen.className = 'btn btn-sm btn-outline-secondary ms-2';
-            btnOpen.textContent = 'Abrir en nueva pestaña';
-            btnOpen.addEventListener('click', function () {
+            const toggle = document.createElement('button');
+            toggle.className = 'btn btn-sm btn-outline-success dropdown-toggle dropdown-toggle-split';
+            toggle.setAttribute('data-bs-toggle', 'dropdown');
+            toggle.setAttribute('aria-expanded', 'false');
+
+            const menu = document.createElement('ul');
+            menu.className = 'dropdown-menu dropdown-menu-end';
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.className = 'dropdown-item';
+            a.href = '#';
+            a.textContent = 'Abrir en nueva pestaña';
+            a.addEventListener('click', function (ev) {
+                ev.preventDefault();
                 try {
                     localStorage.setItem('selected_trend', JSON.stringify(tr));
-                } catch (err) {
-                    console.error('Error saving trend for new tab', err);
-                }
+                } catch (err) { console.error('Error saving trend for new tab', err); }
                 window.open('/pipeline/run', '_blank');
             });
+            li.appendChild(a);
+            menu.appendChild(li);
 
-            actionDiv.appendChild(btn);
-            actionDiv.appendChild(btnOpen);
+            group.appendChild(primary);
+            group.appendChild(toggle);
+            group.appendChild(menu);
+
+            actionDiv.appendChild(group);
             meta.appendChild(scoreDiv);
             meta.appendChild(actionDiv);
 
