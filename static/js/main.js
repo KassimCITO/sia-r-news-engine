@@ -625,8 +625,16 @@ function selectTrendJson(jsonPayload) {
         // Save to localStorage for pipeline prefill
         localStorage.setItem('selected_trend', JSON.stringify(trend));
         showToast(`Tendencia seleccionada: ${trend.title}`, 'success');
-        // Redirect to pipeline run page where fields will be prefilled
-        window.location.href = '/pipeline/run';
+        // Small delay to allow the toast to render, then navigate to pipeline page
+        console.log('Selected trend saved, redirecting to /pipeline/run');
+        setTimeout(function() {
+            try {
+                window.location.assign('/pipeline/run');
+            } catch (err) {
+                // Fallback
+                window.location.href = '/pipeline/run';
+            }
+        }, 200);
     } catch (err) {
         console.error('Error selecting trend', err);
         showToast('No se pudo seleccionar la tendencia', 'danger');
