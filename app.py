@@ -1,6 +1,6 @@
 import logging
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect, url_for
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from config import DEBUG, HOST, PORT, JWT_SECRET, LOG_LEVEL, FLASK_ENV
@@ -55,6 +55,11 @@ app.register_blueprint(wp_bp)
 app.register_blueprint(ui_bp)
 
 logger.info(f"Registered blueprints: main, auth, pipeline, wp, ui")
+
+# Root route - Redirect to dashboard
+@app.route('/', methods=['GET'])
+def index():
+    return redirect(url_for('dashboard_page'))
 
 # UI Routes - Serve HTML templates
 @app.route('/login', methods=['GET'])
