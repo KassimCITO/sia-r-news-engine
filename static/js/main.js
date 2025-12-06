@@ -586,16 +586,30 @@ async function loadTrends() {
             scoreDiv.innerHTML = `<span class="badge bg-primary">Score ${tr.score}</span>`;
 
             const actionDiv = document.createElement('div');
+
+            // Primary: Select and redirect to pipeline (saves selection and navigates)
             const btn = document.createElement('button');
             btn.className = 'btn btn-sm btn-outline-success';
             btn.textContent = 'Seleccionar';
-            // attach full trend payload to onclick using encodeURIComponent to be safe
-            // Attach click handler safely with closure to avoid string-escaping issues
             btn.addEventListener('click', function () {
                 selectTrendJson(JSON.stringify(tr));
             });
 
+            // Secondary: Open pipeline in new tab (fallback)
+            const btnOpen = document.createElement('button');
+            btnOpen.className = 'btn btn-sm btn-outline-secondary ms-2';
+            btnOpen.textContent = 'Abrir en nueva pestaña';
+            btnOpen.addEventListener('click', function () {
+                try {
+                    localStorage.setItem('selected_trend', JSON.stringify(tr));
+                } catch (err) {
+                    console.error('Error saving trend for new tab', err);
+                }
+                window.open('/pipeline/run', '_blank');
+            });
+
             actionDiv.appendChild(btn);
+            actionDiv.appendChild(btnOpen);
             meta.appendChild(scoreDiv);
             meta.appendChild(actionDiv);
 
