@@ -590,8 +590,10 @@ async function loadTrends() {
             btn.className = 'btn btn-sm btn-outline-success';
             btn.textContent = 'Seleccionar';
             // attach full trend payload to onclick using encodeURIComponent to be safe
-            const payload = encodeURIComponent(JSON.stringify(tr));
-            btn.setAttribute('onclick', `selectTrendJson(decodeURIComponent('${payload}'))`);
+            // Attach click handler safely with closure to avoid string-escaping issues
+            btn.addEventListener('click', function () {
+                selectTrendJson(JSON.stringify(tr));
+            });
 
             actionDiv.appendChild(btn);
             meta.appendChild(scoreDiv);
