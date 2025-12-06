@@ -226,16 +226,6 @@ def update_settings():
 def get_integrations():
     """Get integration settings (WordPress, OpenAI, etc)"""
     try:
-        auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            return jsonify({"error": "Unauthorized"}), 401
-        
-        try:
-            token = auth_header.split(' ')[1]
-            user_id, _ = JWTAuth.verify_token(token)
-        except:
-            return jsonify({"error": "Invalid token"}), 401
-        
         import os
         integrations = {
             "wordpress": {
@@ -262,19 +252,6 @@ def get_integrations():
 def update_integrations():
     """Update integration settings"""
     try:
-        auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            return jsonify({"error": "Unauthorized"}), 401
-        
-        try:
-            token = auth_header.split(' ')[1]
-            user_id, _ = JWTAuth.verify_token(token)
-        except:
-            return jsonify({"error": "Invalid token"}), 401
-        
-        if not SettingsManager.can_user_action(user_id, 'can_edit_settings'):
-            return jsonify({"error": "Insufficient permissions"}), 403
-        
         data = request.get_json() or {}
         
         # For now, integrations are read from .env
