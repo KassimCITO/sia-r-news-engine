@@ -37,15 +37,14 @@
                         <a class="nav-link" href="/settings">Configuración</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="toggleDarkMode(); return false;" title="Cambiar tema">
-                            <i class="bi bi-moon-stars" id="theme-icon"></i>
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a class="nav-link" href="/login">Logout</a>
                     </li>
                 </ul>
             </div>
+            <!-- Theme Toggle Button - Separate from navbar menu -->
+            <button class="btn btn-theme-toggle" id="themeToggleBtn" onclick="toggleDarkMode(); return false;" title="Cambiar tema">
+                <i class="bi bi-moon-stars" id="theme-icon"></i>
+            </button>
         </div>
     </nav>
 
