@@ -606,8 +606,24 @@ def test_openai_connection():
                 
                 if response.status == 401:
                     message = "Clave de API inválida o incorrecta"
+                    logger.error(f"OpenAI API error: {error_msg}")
+                    return jsonify({
+                        "status": "error",
+                        "message": message
+                    }), 400
                 elif response.status == 429:
                     message = "Límite de velocidad excedido. Intenta nuevamente en unos minutos"
+                    # Extract retry_after from response headers if available
+                    retry_after = response.getheader('retry-after')
+                    retry_seconds = int(retry_after) if retry_after and retry_after.isdigit() else 60
+                    
+                    logger.warning(f"OpenAI rate limit: {message}")
+                    return jsonify({
+                        "status": "error",
+                        "message": message,
+                        "retry_after": retry_seconds,
+                        "retry_after_seconds": retry_seconds
+                    }), 429
                 elif response.status == 404:
                     message = "Modelo no disponible o endpoint no existe"
                 else:
