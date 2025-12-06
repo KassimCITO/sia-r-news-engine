@@ -68,6 +68,33 @@
     </div>
 </div>
 
+<!-- Trends Grid -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Tendencias Actuales</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <small class="text-muted">Eventos detectados por Google Trends y fuentes sociales</small>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="loadTrends();">Actualizar</button>
+                    </div>
+                </div>
+                <div id="trends-grid" class="trends-grid">
+                    <!-- Trend cards will be injected here -->
+                    <div class="text-center text-muted w-100 py-4">
+                        <i class="bi bi-hourglass-split"></i> Cargando tendencias...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Recent Items Table -->
 <div class="row">
     <div class="col-md-12">
@@ -106,6 +133,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     loadDashboardStats();
     loadRecentArticles();
+    // Load trends section
+    if (typeof loadTrends === 'function') loadTrends();
 });
 
 function loadDashboardStats() {

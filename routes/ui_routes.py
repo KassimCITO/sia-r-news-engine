@@ -497,6 +497,63 @@ def get_metrics_enhanced():
         return jsonify({"error": str(e)}), 500
 
 
+# === Trends (mock) ===
+@ui_bp.route('/trends', methods=['GET'])
+def get_trends():
+    """Return a list of trending events (mock data for UI)."""
+    try:
+        from datetime import datetime, timedelta
+
+        now = datetime.utcnow()
+
+        sample_trends = [
+            {
+                "id": 1,
+                "title": "Nuevo lanzamiento de IA en asistentes conversacionales",
+                "source": "Google Trends",
+                "category": "Tecnología",
+                "score": 92,
+                "summary": "Interés en asistentes de IA crece tras varios anuncios de nuevos modelos.",
+                "timestamp": (now - timedelta(hours=2)).isoformat() + 'Z'
+            },
+            {
+                "id": 2,
+                "title": "Debate sobre política fiscal en el congreso",
+                "source": "News Aggregator",
+                "category": "Política",
+                "score": 78,
+                "summary": "Sesión del congreso genera discusión sobre reforma fiscal propuesta.",
+                "timestamp": (now - timedelta(days=1)).isoformat() + 'Z'
+            },
+            {
+                "id": 3,
+                "title": "Copa local: goleada en semifinales",
+                "source": "Twitter",
+                "category": "Deportes",
+                "score": 85,
+                "summary": "Partido con resultados inesperados impulsa conversación en redes.",
+                "timestamp": (now - timedelta(hours=6)).isoformat() + 'Z'
+            },
+            {
+                "id": 4,
+                "title": "Aumento en precios del petróleo afecta mercados",
+                "source": "Google Trends",
+                "category": "Economía",
+                "score": 69,
+                "summary": "Movimientos en los precios energéticos generan preocupación entre inversores.",
+                "timestamp": (now - timedelta(hours=12)).isoformat() + 'Z'
+            }
+        ]
+
+        return jsonify({
+            "status": "success",
+            "trends": sample_trends
+        }), 200
+    except Exception as e:
+        logger.error(f"Error getting trends: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 # === Connection Tests ===
 
 @ui_bp.route('/test/wordpress', methods=['POST'])

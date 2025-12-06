@@ -545,6 +545,77 @@ function exportToJSON(filename, data) {
 // Initialization
 // ============================================================================
 
+/**
+ * Load trends from backend and render grid
+ */
+async function loadTrends() {
+    try {
+        const resp = await fetch('/api/ui/trends', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        const data = await resp.json();
+
+        const container = document.getElementById('trends-grid');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (!data || !data.trends || data.trends.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted w-100 py-4">No se encontraron tendencias</div>';
+            return;
+        }
+
+        data.trends.forEach(tr => {
+            const card = document.createElement('div');
+            card.className = 'trend-card';
+            card.innerHTML = `
+                <div class="trend-card-inner">
+                    <div class="trend-header">
+                        <h6 class="mb-1">${escapeHtml(tr.title)}</h6>
+                        <small class="text-muted">${tr.source} · ${tr.category}</small>
+                    </div>
+                    <p class="trend-summary text-truncate">${escapeHtml(tr.summary)}</p>
+                    <div class="trend-meta d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-primary">Score ${tr.score}</span>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-success" onclick="selectTrend(${tr.id}, '${escapeJs(tr.title)}')">Seleccionar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+    } catch (err) {
+        console.error('Error loading trends', err);
+        showToast('No se pudieron cargar las tendencias', 'danger');
+    }
+}
+
+/**
+ * Select a trend (placeholder action)
+ */
+function selectTrend(id, title) {
+    // For now just show feedback; later wire to pipeline prefill
+    showToast(`Tendencia seleccionada: ${title}`, 'success');
+    console.log('Trend selected', id, title);
+}
+
+/**
+ * Escapes HTML to avoid injection in inserted strings
+ */
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe.replace(/[&<>"']/g, function(m) {
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"})[m];
+    });
+}
+
+function escapeJs(s) {
+    if (!s) return '';
+    return s.replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize dark mode

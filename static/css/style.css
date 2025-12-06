@@ -699,3 +699,50 @@ footer a:hover {
     border-top: 2px solid #0f3460;
 }
 
+/* Trends Grid Styles */
+.trends-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.trend-card {
+    background: #ffffff;
+    border: 1px solid #e6e6e6;
+    border-radius: 8px;
+    padding: 0.75rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.trend-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.trend-card .trend-header h6 {
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.trend-card .trend-summary {
+    margin: 0.5rem 0 0.75rem 0;
+    color: #555;
+}
+
+.trend-meta .badge {
+    font-weight: 600;
+}
+
+[data-bs-theme="dark"] .trend-card {
+    background: linear-gradient(135deg, #0f1419 0%, #162028 100%);
+    border: 1px solid #253547;
+}
+
+[data-bs-theme="dark"] .trend-card .trend-summary {
+    color: #c8d7e6;
+}
+
+[data-bs-theme="dark"] .trend-card .trend-header h6 {
+    color: #e8f7ff;
+}
+
