@@ -315,7 +315,21 @@ function loadSettings() {
                 document.getElementById('wp-token').value = integrations.wordpress.token || '';
             }
             if (integrations.openai) {
-                document.getElementById('openai-key').value = integrations.openai.api_key || '';
+                const openaiInput = document.getElementById('openai-key');
+                const apiKey = integrations.openai.api_key || '';
+                
+                // Check if it's a masked key (dots)
+                if (apiKey.includes('•') || apiKey.startsWith('•')) {
+                    openaiInput.value = '';
+                    openaiInput.placeholder = 'Configurada (oculta por seguridad) - Ingresa nueva clave para cambiar';
+                    openaiInput.style.color = '#999';
+                } else if (apiKey) {
+                    openaiInput.value = apiKey;
+                    openaiInput.placeholder = 'sk-...';
+                } else {
+                    openaiInput.value = '';
+                    openaiInput.placeholder = 'sk-...';
+                }
             }
         }
     })

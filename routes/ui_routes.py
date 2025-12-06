@@ -227,15 +227,22 @@ def get_integrations():
     """Get integration settings (WordPress, OpenAI, etc)"""
     try:
         import os
+        
+        # Get OpenAI API key status
+        openai_key = os.getenv("OPENAI_API_KEY", "")
+        openai_configured = bool(openai_key)
+        # Show masked key if configured, empty if not
+        openai_display = "••••••••••••••••••••••••" if openai_configured else ""
+        
         integrations = {
             "wordpress": {
                 "url": os.getenv("WP_BASE_URL", ""),
-                "username": os.getenv("WP_USERNAME", "")
-                # Don't expose password!
+                "username": os.getenv("WP_USERNAME", ""),
+                "token": ""  # Never expose password
             },
             "openai": {
-                # Don't expose the actual API key, just indicate it's set
-                "configured": bool(os.getenv("OPENAI_API_KEY"))
+                "api_key": openai_display,  # Masked if configured
+                "configured": openai_configured
             }
         }
         
