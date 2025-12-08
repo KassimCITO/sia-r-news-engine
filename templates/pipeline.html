@@ -228,23 +228,31 @@ function runPipeline(event) {
 }
 
 function displayResults(result) {
-    if (!result.success) {
+    // Backend returns { status: 'success', final_text, final_h1, final_meta_description,
+    // final_categories, final_tags, quality_score, warnings }
+    if (!result || result.status !== 'success') {
         document.getElementById('results-content').innerHTML = `
             <div class="alert alert-danger">
                 <h6>Error en ejecución</h6>
-                <p>${result.error || 'Error desconocido'}</p>
+                <p>${(result && (result.error || result.message)) || 'Error desconocido'}</p>
             </div>
         `;
         return;
     }
-    
+
+    const qualityPercent = typeof result.quality_score === 'number' ? (result.quality_score * 100).toFixed(1) + '%' : 'N/A';
+    const factRisk = (result.stages && result.stages.fact_checker && typeof result.stages.fact_checker.risk_score === 'number') ? (result.stages.fact_checker.risk_score * 100).toFixed(1) + '%' : 'N/A';
+    const categories = result.final_categories || result.stages?.taxonomy?.categories || [];
+    const tags = result.final_tags || result.stages?.taxonomy?.tags || [];
+    const processed = result.final_text || result.processed_content || '';
+
     const html = `
         <div class="row">
             <div class="col-md-6">
                 <div class="card mb-3">
                     <div class="card-body">
                         <h6>Puntuación de Calidad</h6>
-                        <h4>${(result.quality_score * 100).toFixed(1)}%</h4>
+                        <h4>${qualityPercent}</h4>
                     </div>
                 </div>
             </div>
@@ -252,7 +260,7 @@ function displayResults(result) {
                 <div class="card mb-3">
                     <div class="card-body">
                         <h6>Riesgo de Factualidad</h6>
-                        <h4>${(result.fact_risk_score * 100).toFixed(1)}%</h4>
+                        <h4>${factRisk}</h4>
                     </div>
                 </div>
             </div>
@@ -263,7 +271,7 @@ function displayResults(result) {
                 <h6 class="mb-0">Categorías Detectadas</h6>
             </div>
             <div class="card-body">
-                <div id="categories">${result.categories.map(c => `<span class="badge bg-info">${c}</span>`).join(' ')}</div>
+                <div id="categories">${categories.map(c => `<span class="badge bg-info me-1">${c}</span>`).join(' ')}</div>
             </div>
         </div>
         
@@ -272,7 +280,7 @@ function displayResults(result) {
                 <h6 class="mb-0">Tags Generados</h6>
             </div>
             <div class="card-body">
-                <div id="tags">${result.tags.map(t => `<span class="badge bg-secondary">${t}</span>`).join(' ')}</div>
+                <div id="tags">${tags.map(t => `<span class="badge bg-secondary me-1">${t}</span>`).join(' ')}</div>
             </div>
         </div>
         
@@ -281,11 +289,11 @@ function displayResults(result) {
                 <h6 class="mb-0">Contenido Procesado</h6>
             </div>
             <div class="card-body">
-                <p>${result.processed_content.substring(0, 300)}...</p>
+                <p>${processed.substring(0, 300)}${processed.length > 300 ? '...' : ''}</p>
             </div>
         </div>
     `;
-    
+
     document.getElementById('results-content').innerHTML = html;
 }
 

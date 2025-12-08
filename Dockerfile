@@ -16,8 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application
 COPY . .
 
-# Initialize database
-RUN python -c "from storage.database import init_db; init_db()"
+# Database initialization happens at container runtime to avoid creating
+# duplicate tables during image build. The application will call `init_db()`
+# on startup; avoid running it here.
 
 # Expose port
 EXPOSE 8000

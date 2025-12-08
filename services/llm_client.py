@@ -4,8 +4,10 @@ import logging
 from config import OPENAI_API_KEY, OPENAI_MODEL, OPENAI_TEMPERATURE, OPENAI_MAX_TOKENS
 
 logger = logging.getLogger(__name__)
-
+ 
+# Use legacy top-level openai API with api_key to avoid httpx client init
 openai.api_key = OPENAI_API_KEY
+
 
 class LLMClient:
     """Wrapper para OpenAI GPT con retries y timeout"""
@@ -17,6 +19,10 @@ class LLMClient:
         self.max_tokens = max_tokens
         self.retries = retries
         self.timeout = timeout
+        self._client = None
+    
+    # No dedicated OpenAI client instance to avoid httpx/proxies incompatibilities;
+    # we will call the top-level `openai` methods which use the configured api_key.
     
     def generate(self, prompt, system_prompt=None, json_mode=False):
         """
@@ -46,10 +52,16 @@ class LLMClient:
                 
                 if json_mode:
                     kwargs["response_format"] = {"type": "json_object"}
-                
+
+                # Use top-level ChatCompletion for compatibility with installed openai
                 response = openai.ChatCompletion.create(**kwargs)
-                
-                content = response.choices[0].message.content.strip()
+
+                # Support both response shapes (old/new)
+                try:
+                    content = response.choices[0].message.content.strip()
+                except Exception:
+                    # fallback for other response formats
+                    content = getattr(response.choices[0], 'text', '').strip()
                 
                 if json_mode:
                     import json
@@ -61,25 +73,32 @@ class LLMClient:
                 
                 return content
                 
-            except openai.error.RateLimitError:
-                if attempt < self.retries - 1:
-                    wait_time = 2 ** attempt
-                    logger.warning(f"Rate limited. Retrying in {wait_time}s...")
-                    time.sleep(wait_time)
-                else:
-                    logger.error("Max retries exceeded for rate limit")
-                    raise
-            except openai.error.APIError as e:
-                if attempt < self.retries - 1:
-                    wait_time = 2 ** attempt
-                    logger.warning(f"API error: {e}. Retrying in {wait_time}s...")
-                    time.sleep(wait_time)
-                else:
-                    logger.error(f"Max retries exceeded: {e}")
-                    raise
             except Exception as e:
-                logger.error(f"Unexpected error in LLM client: {e}")
-                raise
+                # The openai package may expose different exception types depending
+                # on version. Inspect exception class name to decide retry behavior.
+                exc_name = e.__class__.__name__
+                if exc_name.lower().find('ratelimit') != -1 or exc_name.lower().find('rate') != -1:
+                    if attempt < self.retries - 1:
+                        wait_time = 2 ** attempt
+                        logger.warning(f"Rate limited ({exc_name}). Retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        logger.error("Max retries exceeded for rate limit")
+                        raise
+                elif exc_name.lower().find('apierror') != -1 or exc_name.lower().find('service') != -1:
+                    if attempt < self.retries - 1:
+                        wait_time = 2 ** attempt
+                        logger.warning(f"API error ({exc_name}): {e}. Retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        logger.error(f"Max retries exceeded: {e}")
+                        raise
+                else:
+                    logger.error(f"Unexpected error in LLM client: {e}")
+                    raise
+            # loop will retry if needed
     
     def generate_json(self, prompt, system_prompt=None):
         """Generate JSON from LLM"""

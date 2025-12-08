@@ -35,14 +35,10 @@ class Humanizer:
         """Apply local humanization rules"""
         
         # Replace passive voice with active where possible
-        replacements = {
-            r'is\s+being\s+(\w+)': r'is \1',
-            r'has\s+been\s+(\w+)': r'has \1',
-            r'was\s+(\w+)ed\s+by': 'to'
-        }
-        
-        for pattern, replacement in replacements.items():
-            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        # Using lambda functions for proper backreference handling
+        text = re.sub(r'is\s+being\s+(\w+)', lambda m: f'is {m.group(1)}', text, flags=re.IGNORECASE)
+        text = re.sub(r'has\s+been\s+(\w+)', lambda m: f'has {m.group(1)}', text, flags=re.IGNORECASE)
+        text = re.sub(r'was\s+(\w+)ed\s+by', 'to', text, flags=re.IGNORECASE)
         
         # Add contractions (common in human writing)
         contractions = {

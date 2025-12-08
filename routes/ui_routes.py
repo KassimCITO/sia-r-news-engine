@@ -7,6 +7,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Simple in-memory cache for trends (module-level). Keeps the last
+# successful trends response (live or mock) with a timestamp. TTL in seconds.
+_TRENDS_CACHE = {
+    'data': None,
+    'ts': 0
+}
+_TRENDS_CACHE_TTL = 60  # seconds
+
 ui_bp = Blueprint('ui', __name__, url_prefix='/api/ui')
 
 # === Status and Dashboard ===
@@ -497,71 +505,44 @@ def get_metrics_enhanced():
         return jsonify({"error": str(e)}), 500
 
 
-# === Trends (mock) ===
+# === Trends (Multiple Real Sources) ===
 @ui_bp.route('/trends', methods=['GET'])
 def get_trends():
-    """Return trending events; try live Google Trends when requested, otherwise return mock data."""
+    """Return trending events from multiple real sources (Google Trends, Twitter, News API, RSS, SerpAPI)"""
     try:
         # Query parameters
-        live = request.args.get('live', '0') in ['1', 'true', 'yes']
+        force = request.args.get('force', '0') in ['1', 'true', 'yes']  # Force refresh bypass cache
         limit = int(request.args.get('limit', 10) or 10)
-        geo = request.args.get('geo', 'global')
-
-        if live:
-            try:
-                from services.trends_service import TrendsService
-                trends = TrendsService.fetch_google_trends(limit=limit, geo=geo)
-                return jsonify({"status": "success", "trends": trends}), 200
-            except Exception as live_err:
-                logger.warning(f"Live trends failed, falling back to mock: {live_err}")
-
-        # Fallback mock data (keeps previous structure)
-        from datetime import datetime, timedelta
-        now = datetime.utcnow()
-
-        sample_trends = [
-            {
-                "id": 1,
-                "title": "Nuevo lanzamiento de IA en asistentes conversacionales",
-                "source": "Google Trends",
-                "category": "Tecnología",
-                "score": 92,
-                "summary": "Interés en asistentes de IA crece tras varios anuncios de nuevos modelos.",
-                "timestamp": (now - timedelta(hours=2)).isoformat() + 'Z'
-            },
-            {
-                "id": 2,
-                "title": "Debate sobre política fiscal en el congreso",
-                "source": "News Aggregator",
-                "category": "Política",
-                "score": 78,
-                "summary": "Sesión del congreso genera discusión sobre reforma fiscal propuesta.",
-                "timestamp": (now - timedelta(days=1)).isoformat() + 'Z'
-            },
-            {
-                "id": 3,
-                "title": "Copa local: goleada en semifinales",
-                "source": "Twitter",
-                "category": "Deportes",
-                "score": 85,
-                "summary": "Partido con resultados inesperados impulsa conversación en redes.",
-                "timestamp": (now - timedelta(hours=6)).isoformat() + 'Z'
-            },
-            {
-                "id": 4,
-                "title": "Aumento en precios del petróleo afecta mercados",
-                "source": "Google Trends",
-                "category": "Economía",
-                "score": 69,
-                "summary": "Movimientos en los precios energéticos generan preocupación entre inversores.",
-                "timestamp": (now - timedelta(hours=12)).isoformat() + 'Z'
-            }
-        ]
-
-        return jsonify({"status": "success", "trends": sample_trends}), 200
+        sources = request.args.get('sources', '').split(',') if request.args.get('sources') else None
+        flatten = request.args.get('flatten', '0') in ['1', 'true', 'yes']  # Combine all sources
+        
+        from services.multi_trends_service import MultiTrendsService
+        
+        # Fetch from all configured sources
+        all_trends = MultiTrendsService.fetch_all_trends(limit=limit, sources=sources, force=force)
+        
+        # Return flattened (combined and sorted) or by source
+        if flatten:
+            flattened = MultiTrendsService.flatten_trends(all_trends, limit=limit)
+            return jsonify({
+                "status": "success",
+                "trends": flattened,
+                "total": len(flattened),
+                "sources": list(all_trends.keys()),
+                "from_sources": "combined"
+            }), 200
+        else:
+            return jsonify({
+                "status": "success",
+                "trends": all_trends,
+                "total": sum(len(v) for v in all_trends.values()),
+                "sources": list(all_trends.keys()),
+                "from_sources": "individual"
+            }), 200
+            
     except Exception as e:
         logger.error(f"Error getting trends: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "status": "error"}), 500
 
 
 # === Connection Tests ===

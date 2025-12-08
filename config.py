@@ -65,3 +65,37 @@ ENABLE_PDF_GENERATION = os.getenv("ENABLE_PDF_GENERATION", "True") == "True"
 AUTO_PUBLISH_ENABLED = os.getenv("AUTO_PUBLISH_ENABLED", "False") == "True"
 CLOUDFLARE_ZONE_ID = os.getenv("CLOUDFLARE_ZONE_ID", "")
 CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN", "")
+
+# === TRENDS INTEGRATION CONFIGURATION ===
+# Google Trends (uses pytrends - no API key needed, but can be rate-limited)
+GOOGLE_TRENDS_ENABLED = os.getenv("GOOGLE_TRENDS_ENABLED", "True") == "True"
+
+# Twitter/X API v2 (requires API credentials)
+TWITTER_API_ENABLED = os.getenv("TWITTER_API_ENABLED", "False") == "True"
+TWITTER_API_KEY = os.getenv("TWITTER_API_KEY", "")
+TWITTER_API_SECRET = os.getenv("TWITTER_API_SECRET", "")
+TWITTER_ACCESS_TOKEN = os.getenv("TWITTER_ACCESS_TOKEN", "")
+TWITTER_ACCESS_TOKEN_SECRET = os.getenv("TWITTER_ACCESS_TOKEN_SECRET", "")
+TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "")
+
+# News API (requires API key)
+NEWS_API_ENABLED = os.getenv("NEWS_API_ENABLED", "False") == "True"
+NEWS_API_KEY = os.getenv("NEWS_API_KEY", "")
+NEWS_API_COUNTRY = os.getenv("NEWS_API_COUNTRY", "mx")  # Default: Mexico
+NEWS_API_CATEGORY = os.getenv("NEWS_API_CATEGORY", "general")
+
+# RSS Feeds (no API key needed, but requires feed URLs)
+RSS_FEEDS_ENABLED = os.getenv("RSS_FEEDS_ENABLED", "True") == "True"
+RSS_FEED_URLS = os.getenv("RSS_FEED_URLS", "").split(",") if os.getenv("RSS_FEED_URLS") else [
+    "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada",
+    "https://www.bbc.com/mundo/feed.xml",
+    "https://feeds.bloomberg.com/markets/news.rss",
+]
+
+# SerpAPI (alternative search results - requires API key)
+SERPAPI_ENABLED = os.getenv("SERPAPI_ENABLED", "False") == "True"
+SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY", "")
+
+# Cache configuration for trends
+TRENDS_CACHE_TTL = int(os.getenv("TRENDS_CACHE_TTL", "3600"))  # 1 hour default
+TRENDS_MAX_RESULTS = int(os.getenv("TRENDS_MAX_RESULTS", "20"))

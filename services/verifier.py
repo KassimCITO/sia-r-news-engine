@@ -94,17 +94,18 @@ class Verifier:
     def _detect_contradictions(self, text):
         """Detect logical contradictions"""
         # Look for patterns like "X is true" and "X is false"
+        # Use simple string patterns, not regex backreferences
         contradiction_patterns = [
-            (r'is\s+not\s+(\w+)', r'is\s+\1'),
-            (r'impossible', r'possible'),
-            (r'never', r'always'),
+            ('is not ', 'is '),           # Find both patterns in text
+            ('impossible', 'possible'),
+            ('never', 'always'),
         ]
         
         for neg_pattern, pos_pattern in contradiction_patterns:
-            neg_matches = re.findall(neg_pattern, text)
-            pos_matches = re.findall(pos_pattern, text)
+            neg_found = neg_pattern in text.lower()
+            pos_found = pos_pattern in text.lower()
             
-            if neg_matches and pos_matches:
+            if neg_found and pos_found:
                 return True
         
         return False

@@ -548,9 +548,11 @@ function exportToJSON(filename, data) {
 /**
  * Load trends from backend and render grid
  */
-async function loadTrends() {
+async function loadTrends(forceRefresh = false) {
     try {
-        const resp = await fetch('/api/ui/trends', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        // Request flattened trends (combined from all sources)
+        const url = forceRefresh ? '/api/ui/trends?force=1&flatten=1' : '/api/ui/trends?flatten=1';
+        const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + getToken() } });
         const data = await resp.json();
 
         const container = document.getElementById('trends-grid');
@@ -558,12 +560,35 @@ async function loadTrends() {
 
         container.innerHTML = '';
 
-        if (!data || !data.trends || data.trends.length === 0) {
+        // Handle both flat array and nested object responses
+        let trendsList = [];
+        
+        if (Array.isArray(data.trends)) {
+            // Flat array response (from ?flatten=1)
+            trendsList = data.trends;
+        } else if (typeof data.trends === 'object' && data.trends !== null) {
+            // Nested object response - flatten all sources
+            Object.values(data.trends).forEach(sourceArray => {
+                if (Array.isArray(sourceArray)) {
+                    trendsList = trendsList.concat(sourceArray);
+                }
+            });
+        }
+
+        if (!trendsList || trendsList.length === 0) {
             container.innerHTML = '<div class="text-center text-muted w-100 py-4">No se encontraron tendencias</div>';
             return;
         }
 
-        data.trends.forEach(tr => {
+        // Add source label if available
+        if (data.sources && data.sources.length > 1) {
+            const sourceLabel = document.createElement('div');
+            sourceLabel.className = 'alert alert-info text-sm';
+            sourceLabel.innerHTML = `<small>Tendencias de: ${data.sources.join(', ')}</small>`;
+            container.parentElement.insertBefore(sourceLabel, container);
+        }
+
+        trendsList.forEach(tr => {
             const card = document.createElement('div');
             card.className = 'trend-card';
 
@@ -573,7 +598,7 @@ async function loadTrends() {
 
             const header = document.createElement('div');
             header.className = 'trend-header';
-            header.innerHTML = `<h6 class="mb-1">${escapeHtml(tr.title)}</h6><small class="text-muted">${tr.source} · ${tr.category}</small>`;
+            header.innerHTML = `<h6 class="mb-1">${escapeHtml(tr.title)}</h6><small class="text-muted">${tr.source} · ${tr.category || 'General'}</small>`;
 
             const summary = document.createElement('p');
             summary.className = 'trend-summary text-truncate';
@@ -583,7 +608,7 @@ async function loadTrends() {
             meta.className = 'trend-meta d-flex justify-content-between align-items-center';
 
             const scoreDiv = document.createElement('div');
-            scoreDiv.innerHTML = `<span class="badge bg-primary">Score ${tr.score}</span>`;
+            scoreDiv.innerHTML = `<span class="badge bg-primary">Score ${tr.score || 75}</span>`;
 
             const actionDiv = document.createElement('div');
 
@@ -617,6 +642,7 @@ async function loadTrends() {
                 } catch (err) { console.error('Error saving trend for new tab', err); }
                 window.open('/pipeline/run', '_blank');
             });
+
             li.appendChild(a);
             menu.appendChild(li);
 
@@ -640,6 +666,13 @@ async function loadTrends() {
         console.error('Error loading trends', err);
         showToast('No se pudieron cargar las tendencias', 'danger');
     }
+}
+
+/**
+ * Force refresh trends by bypassing cache
+ */
+async function loadTrendsRefresh() {
+    await loadTrends(true);  // Pass forceRefresh=true to bypass cache
 }
 
 /**
