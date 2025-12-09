@@ -172,23 +172,23 @@ def get_published():
 def get_settings():
     """Get system settings"""
     try:
-        # Check if user is authenticated (token must exist)
-        auth_header = request.headers.get('Authorization')
-        if auth_header:
-            try:
-                token = auth_header.split(' ')[1]
-                user_id, _ = JWTAuth.verify_token(token)
-            except:
-                pass  # Token invalid but continue with default settings
+        from storage.database import get_db_session
+        from storage.models import Settings
         
-        # Return default settings
+        session = get_db_session()
+        settings_db = session.query(Settings).first()
+        
         settings = {
-            "auto_publish_enabled": False,
+            "trend_keywords": settings_db.trend_keywords if settings_db else "",
+            "wp_url": settings_db.wp_url if settings_db else "",
+            "wp_categories": settings_db.wp_categories if settings_db else [],
+            "auto_publish_enabled": settings_db.auto_publish_enabled if settings_db else False,
             "quality_threshold": 75,
             "risk_threshold": 30,
             "seo_threshold": 60,
             "allowed_categories": ["Tecnología", "Política", "Economía"]
         }
+        session.close()
         
         return jsonify({
             "status": "success",
@@ -202,25 +202,30 @@ def get_settings():
 def update_settings():
     """Update system settings"""
     try:
-        # Check if user is authenticated
-        auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            return jsonify({
-                "status": "success",
-                "message": "Settings would be updated (auth not required in demo)"
-            }), 200
-        
-        try:
-            token = auth_header.split(' ')[1]
-            user_id, _ = JWTAuth.verify_token(token)
-        except:
-            pass  # Token invalid but continue
-        
         data = request.get_json()
         if not data:
             return jsonify({"error": "No data provided"}), 400
+            
+        from storage.database import get_db_session
+        from storage.models import Settings
         
-        # In a real implementation, save to database or file
+        session = get_db_session()
+        settings = session.query(Settings).first()
+        
+        if not settings:
+            settings = Settings()
+            session.add(settings)
+            
+        if 'trend_keywords' in data:
+            settings.trend_keywords = data['trend_keywords']
+        if 'site_url' in data: # Map frontend field name
+            settings.wp_url = data['site_url']
+        if 'wp_categories' in data:
+            settings.wp_categories = data['wp_categories']
+            
+        session.commit()
+        session.close()
+        
         return jsonify({
             "status": "success",
             "message": "Settings updated"
@@ -345,9 +350,10 @@ def get_logs():
         offset = int(request.args.get('offset', 0))
         
         from storage.models import PipelineLog
-        from storage.database import get_session
+        from storage.models import PipelineLog
+        from storage.database import get_db_session
         
-        session = get_session()
+        session = get_db_session()
         logs = session.query(PipelineLog)\
             .order_by(PipelineLog.created_at.desc())\
             .limit(limit)\
@@ -380,9 +386,9 @@ def delete_log(log_id):
     """Delete specific log"""
     try:
         from storage.models import PipelineLog
-        from storage.database import get_session
+        from storage.database import get_db_session
         
-        session = get_session()
+        session = get_db_session()
         log = session.query(PipelineLog).filter_by(id=log_id).first()
         
         if not log:
@@ -404,9 +410,9 @@ def clear_logs():
     """Clear all logs"""
     try:
         from storage.models import PipelineLog
-        from storage.database import get_session
+        from storage.database import get_db_session
         
-        session = get_session()
+        session = get_db_session()
         session.query(PipelineLog).delete()
         session.commit()
         
@@ -426,7 +432,7 @@ def get_metrics_enhanced():
     try:
         from datetime import datetime, timedelta
         from storage.models import PipelineLog
-        from storage.database import get_session
+        from storage.database import get_db_session
         
         period = request.args.get('period', '7d')
         
@@ -440,7 +446,7 @@ def get_metrics_enhanced():
         else:
             days = 365
         
-        session = get_session()
+        session = get_db_session()
         start_date = datetime.now() - timedelta(days=days)
         
         logs = session.query(PipelineLog)\
@@ -505,25 +511,32 @@ def get_metrics_enhanced():
         return jsonify({"error": str(e)}), 500
 
 
+
 # === Trends (Multiple Real Sources) ===
 @ui_bp.route('/trends', methods=['GET'])
 def get_trends():
     """Return trending events from multiple real sources (Google Trends, Twitter, News API, RSS, SerpAPI)"""
     try:
         # Query parameters
-        force = request.args.get('force', '0') in ['1', 'true', 'yes']  # Force refresh bypass cache
+        force = request.args.get('force', '0') in ['1', 'true', 'yes']
         limit = int(request.args.get('limit', 10) or 10)
         sources = request.args.get('sources', '').split(',') if request.args.get('sources') else None
-        flatten = request.args.get('flatten', '0') in ['1', 'true', 'yes']  # Combine all sources
+        flatten = request.args.get('flatten', '0') in ['1', 'true', 'yes']
+        keywords = request.args.get('keywords', '')
         
-        from services.multi_trends_service import MultiTrendsService
+        from services.trend_harvester import TrendHarvester
         
         # Fetch from all configured sources
-        all_trends = MultiTrendsService.fetch_all_trends(limit=limit, sources=sources, force=force)
+        all_trends = TrendHarvester.fetch_all_trends(
+            limit=limit, 
+            sources=sources, 
+            force=force, 
+            keywords=keywords
+        )
         
         # Return flattened (combined and sorted) or by source
         if flatten:
-            flattened = MultiTrendsService.flatten_trends(all_trends, limit=limit)
+            flattened = TrendHarvester.flatten_trends(all_trends, limit=limit)
             return jsonify({
                 "status": "success",
                 "trends": flattened,
@@ -543,6 +556,53 @@ def get_trends():
     except Exception as e:
         logger.error(f"Error getting trends: {e}")
         return jsonify({"error": str(e), "status": "error"}), 500
+
+
+# === Helper Functions for Home Page ===
+
+def get_home_context():
+    """Get context for index.html"""
+    try:
+        from services.metrics_collector import MetricsCollector
+        from services.trend_harvester import TrendHarvester
+        from storage.database import get_db_session
+        from storage.models import Settings
+        
+        # Get settings
+        session = get_db_session()
+        settings = session.query(Settings).first()
+        keywords = settings.trend_keywords if settings else ""
+        wp_site = settings.wp_url if settings else ""
+        wp_categories = settings.wp_categories if settings else []
+        session.close()
+        
+        # Get status
+        stats = MetricsCollector.get_pipeline_stats(days=1)
+        
+        # Get trends (cached or live)
+        trends = TrendHarvester.fetch_trends_realtime(limit=10)
+        
+        return {
+            "status": {
+                "system": "online",
+                "articles_today": stats.get("total_runs", 0),
+                "success_rate": stats.get("success_rate", 0)
+            },
+            "keywords": keywords,
+            "wp_site": wp_site,
+            "wp_categories": wp_categories,
+            "last_trends": trends
+        }
+    except Exception as e:
+        logger.error(f"Error getting home context: {e}")
+        return {
+            "status": {"system": "error", "message": str(e)},
+            "keywords": "",
+            "wp_site": "",
+            "wp_categories": [],
+            "last_trends": []
+        }
+
 
 
 # === Connection Tests ===

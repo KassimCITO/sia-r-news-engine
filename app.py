@@ -11,6 +11,8 @@ from routes.pipeline_routes import pipeline_bp
 from routes.wp_routes import wp_bp
 from routes.ui_routes import ui_bp
 
+from services.scheduler import SchedulerService
+
 # Setup logging
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL),
@@ -47,6 +49,12 @@ try:
 except Exception as e:
     logger.error(f"Error initializing database: {e}")
 
+# Initialize Scheduler
+try:
+    SchedulerService.init_scheduler(app)
+except Exception as e:
+    logger.error(f"Error initializing scheduler: {e}")
+
 # Register Blueprints
 app.register_blueprint(main_bp)
 app.register_blueprint(auth_bp)
@@ -56,10 +64,13 @@ app.register_blueprint(ui_bp)
 
 logger.info(f"Registered blueprints: main, auth, pipeline, wp, ui")
 
-# Root route - Redirect to dashboard
+# Root route - Render index.html with real-time context
+from routes.ui_routes import get_home_context
+
 @app.route('/', methods=['GET'])
 def index():
-    return redirect(url_for('dashboard_page'))
+    context = get_home_context()
+    return render_template('index.html', **context)
 
 # UI Routes - Serve HTML templates
 @app.route('/login', methods=['GET'])

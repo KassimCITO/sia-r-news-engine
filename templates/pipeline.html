@@ -44,28 +44,26 @@
                     <div class="mb-3">
                         <label for="article-title" class="form-label">Título del Artículo</label>
                         <input type="text" class="form-control" id="article-title" required
-                               placeholder="Ej: Las nuevas tendencias en IA">
+                            placeholder="Ej: Las nuevas tendencias en IA">
                     </div>
 
                     <!-- Content -->
                     <div class="mb-3">
                         <label for="article-content" class="form-label">Contenido</label>
                         <textarea class="form-control" id="article-content" rows="8" required
-                                  placeholder="Ingresa el contenido del artículo aquí..."></textarea>
+                            placeholder="Ingresa el contenido del artículo aquí..."></textarea>
                     </div>
 
                     <!-- Author -->
                     <div class="mb-3">
                         <label for="article-author" class="form-label">Autor</label>
-                        <input type="text" class="form-control" id="article-author"
-                               placeholder="Nombre del autor">
+                        <input type="text" class="form-control" id="article-author" placeholder="Nombre del autor">
                     </div>
 
                     <!-- URL Source -->
                     <div class="mb-3">
                         <label for="article-url" class="form-label">URL Fuente (opcional)</label>
-                        <input type="url" class="form-control" id="article-url"
-                               placeholder="https://...">
+                        <input type="url" class="form-control" id="article-url" placeholder="https://...">
                     </div>
 
                     <!-- Category -->
@@ -169,84 +167,84 @@
 </div>
 
 <script>
-let lastPipelineResult = null;
+    let lastPipelineResult = null;
 
-function runPipeline(event) {
-    event.preventDefault();
-    
-    const title = document.getElementById('article-title').value;
-    const content = document.getElementById('article-content').value;
-    const author = document.getElementById('article-author').value || 'Anónimo';
-    const url = document.getElementById('article-url').value;
-    const category = document.getElementById('article-category').value;
-    
-    // Basic validation
-    if (title.length < 5) {
-        alert('El título debe tener al menos 5 caracteres');
-        return;
-    }
-    
-    if (content.length < 50) {
-        alert('El contenido debe tener al menos 50 palabras');
-        return;
-    }
-    
-    // Disable button
-    const btn = document.getElementById('execute-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span> Ejecutando...';
-    
-    const payload = {
-        title,
-        content,
-        author,
-        url: url || null,
-        category: category || null
-    };
-    
-    fetch('/api/pipeline/run', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + getToken()
-        },
-        body: JSON.stringify(payload)
-    })
-    .then(r => r.json())
-    .then(data => {
-        lastPipelineResult = data;
-        displayResults(data);
-        new bootstrap.Modal(document.getElementById('resultsModal')).show();
-    })
-    .catch(error => {
-        alert('Error: ' + error.message);
-    })
-    .finally(() => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-play-fill"></i> Ejecutar Pipeline';
-    });
-}
+    function runPipeline(event) {
+        event.preventDefault();
 
-function displayResults(result) {
-    // Backend returns { status: 'success', final_text, final_h1, final_meta_description,
-    // final_categories, final_tags, quality_score, warnings }
-    if (!result || result.status !== 'success') {
-        document.getElementById('results-content').innerHTML = `
+        const title = document.getElementById('article-title').value;
+        const content = document.getElementById('article-content').value;
+        const author = document.getElementById('article-author').value || 'Anónimo';
+        const url = document.getElementById('article-url').value;
+        const category = document.getElementById('article-category').value;
+
+        // Basic validation
+        if (title.length < 5) {
+            alert('El título debe tener al menos 5 caracteres');
+            return;
+        }
+
+        if (content.length < 50) {
+            alert('El contenido debe tener al menos 50 palabras');
+            return;
+        }
+
+        // Disable button
+        const btn = document.getElementById('execute-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span> Ejecutando...';
+
+        const payload = {
+            title,
+            content,
+            author,
+            url: url || null,
+            category: category || null
+        };
+
+        fetch('/api/pipeline/run', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(r => r.json())
+            .then(data => {
+                lastPipelineResult = data;
+                displayResults(data);
+                new bootstrap.Modal(document.getElementById('resultsModal')).show();
+            })
+            .catch(error => {
+                alert('Error: ' + error.message);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-play-fill"></i> Ejecutar Pipeline';
+            });
+    }
+
+    function displayResults(result) {
+        // Backend returns { status: 'success', final_text, final_h1, final_meta_description,
+        // final_categories, final_tags, quality_score, warnings }
+        if (!result || result.status !== 'success') {
+            document.getElementById('results-content').innerHTML = `
             <div class="alert alert-danger">
                 <h6>Error en ejecución</h6>
                 <p>${(result && (result.error || result.message)) || 'Error desconocido'}</p>
             </div>
         `;
-        return;
-    }
+            return;
+        }
 
-    const qualityPercent = typeof result.quality_score === 'number' ? (result.quality_score * 100).toFixed(1) + '%' : 'N/A';
-    const factRisk = (result.stages && result.stages.fact_checker && typeof result.stages.fact_checker.risk_score === 'number') ? (result.stages.fact_checker.risk_score * 100).toFixed(1) + '%' : 'N/A';
-    const categories = result.final_categories || result.stages?.taxonomy?.categories || [];
-    const tags = result.final_tags || result.stages?.taxonomy?.tags || [];
-    const processed = result.final_text || result.processed_content || '';
+        const qualityPercent = typeof result.quality_score === 'number' ? (result.quality_score * 100).toFixed(1) + '%' : 'N/A';
+        const factRisk = (result.stages && result.stages.fact_checker && typeof result.stages.fact_checker.risk_score === 'number') ? (result.stages.fact_checker.risk_score * 100).toFixed(1) + '%' : 'N/A';
+        const categories = result.final_categories || result.stages?.taxonomy?.categories || [];
+        const tags = result.final_tags || result.stages?.taxonomy?.tags || [];
+        const processed = result.final_text || result.processed_content || '';
 
-    const html = `
+        const html = `
         <div class="row">
             <div class="col-md-6">
                 <div class="card mb-3">
@@ -294,70 +292,123 @@ function displayResults(result) {
         </div>
     `;
 
-    document.getElementById('results-content').innerHTML = html;
-}
+        document.getElementById('results-content').innerHTML = html;
+    }
 
-function savePipeline() {
-    if (!lastPipelineResult) return;
-    
-    // Save to localStorage for later review
-    localStorage.setItem('last_pipeline_result', JSON.stringify(lastPipelineResult));
-    alert('Resultado guardado. Puedes revisarlo en el panel de control.');
-    window.location.href = '/dashboard';
-}
+    function savePipeline() {
+        if (!lastPipelineResult) return;
 
-function getToken() {
-    return localStorage.getItem('auth_token') || '';
-}
+        // Save to localStorage for later review
+        localStorage.setItem('last_pipeline_result', JSON.stringify(lastPipelineResult));
+        alert('Resultado guardado. Puedes revisarlo en el panel de control.');
+        window.location.href = '/dashboard';
+    }
 
-// Prefill fields if a selected trend exists in localStorage
-document.addEventListener('DOMContentLoaded', function() {
-    try {
-        const sel = localStorage.getItem('selected_trend');
-        if (!sel) return;
+    function getToken() {
+        return localStorage.getItem('auth_token') || '';
+    }
 
-        const trend = JSON.parse(sel);
-        if (!trend) return;
+    // Prefill fields if a selected trend exists in localStorage
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            const sel = localStorage.getItem('selected_trend');
+            if (!sel) return;
 
-        // Prefill title and content fields
-        const titleEl = document.getElementById('article-title');
-        const contentEl = document.getElementById('article-content');
-        const categoryEl = document.getElementById('article-category');
+            const trend = JSON.parse(sel);
+            if (!trend) return;
 
-        if (titleEl && !titleEl.value) titleEl.value = trend.title || '';
-        if (contentEl && !contentEl.value) {
-            // Use summary as starter content; keep editable
-            contentEl.value = (trend.summary ? trend.summary + "\n\nFuente: " + (trend.source || '') : '') || '';
+            // Prefill title and content fields
+            const titleEl = document.getElementById('article-title');
+            const contentEl = document.getElementById('article-content');
+            const categoryEl = document.getElementById('article-category');
+
+            if (titleEl && !titleEl.value) titleEl.value = trend.title || '';
+            if (contentEl && !contentEl.value) {
+                // Use summary as starter content; keep editable
+                contentEl.value = (trend.summary ? trend.summary + "\n\nFuente: " + (trend.source || '') : '') || '';
+            }
+            if (categoryEl && trend.category) {
+                const opt = Array.from(categoryEl.options).find(o => o.value === trend.category);
+                if (opt) categoryEl.value = trend.category;
+            }
+
+            // Show banner
+            const banner = document.getElementById('selected-trend-banner');
+            const bannerText = document.getElementById('selected-trend-text');
+            const clearBtn = document.getElementById('clear-trend-btn');
+            if (banner && bannerText) {
+                bannerText.textContent = `Tendencia precargada: ${trend.title} (${trend.source})`;
+                banner.style.display = 'block';
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function () {
+                    localStorage.removeItem('selected_trend');
+                    if (banner) banner.style.display = 'none';
+                    showToast('Selección eliminada', 'info');
+                });
+            }
+
+        } catch (err) {
+            console.error('Error prefilling pipeline from trend', err);
         }
-        if (categoryEl && trend.category) {
-            const opt = Array.from(categoryEl.options).find(o => o.value === trend.category);
-            if (opt) categoryEl.value = trend.category;
-        }
 
-        // Show banner
-        const banner = document.getElementById('selected-trend-banner');
-        const bannerText = document.getElementById('selected-trend-text');
-        const clearBtn = document.getElementById('clear-trend-btn');
-        if (banner && bannerText) {
-            bannerText.textContent = `Tendencia precargada: ${trend.title} (${trend.source})`;
-            banner.style.display = 'block';
-        }
+        // Load categories from settings
+        loadPipelineCategories();
 
-        if (clearBtn) {
-            clearBtn.addEventListener('click', function() {
-                localStorage.removeItem('selected_trend');
-                if (banner) banner.style.display = 'none';
-                showToast('Selección eliminada', 'info');
+        // Load live trends into the pipeline side list (non-blocking)
+        if (typeof loadTrendsForPipeline === 'function') {
+            loadTrendsForPipeline(10);
+        }
+    });
+
+    /**
+     * Load categories from settings and populate the category dropdown
+     */
+    function loadPipelineCategories() {
+        fetch('/api/ui/settings', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success' && data.settings && data.settings.wp_categories) {
+                    const categorySelect = document.getElementById('article-category');
+                    if (!categorySelect) return;
+
+                    const categories = data.settings.wp_categories;
+
+                    // Keep the "auto-detect" option
+                    categorySelect.innerHTML = '<option value="">Detectar automáticamente</option>';
+
+                    // Add categories from settings
+                    if (Array.isArray(categories) && categories.length > 0) {
+                        categories.forEach(cat => {
+                            const option = document.createElement('option');
+                            option.value = cat;
+                            option.textContent = cat;
+                            categorySelect.appendChild(option);
+                        });
+                    } else {
+                        // Fallback to default categories if none configured
+                        const defaultCategories = ['Tecnología', 'Política', 'Economía', 'Deportes', 'Salud'];
+                        defaultCategories.forEach(cat => {
+                            const option = document.createElement('option');
+                            option.value = cat;
+                            option.textContent = cat;
+                            categorySelect.appendChild(option);
+                        });
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Error loading categories:', err);
+                // Keep default hardcoded options on error
             });
-        }
+    }
 
-    } catch (err) {
-        console.error('Error prefilling pipeline from trend', err);
+    function getToken() {
+        return localStorage.getItem('auth_token') || '';
     }
-    // Load live trends into the pipeline side list (non-blocking)
-    if (typeof loadTrendsForPipeline === 'function') {
-        loadTrendsForPipeline(10);
-    }
-});
+
 </script>
 {% endblock %}

@@ -23,11 +23,13 @@ class SEOOptimizer:
         """
         logger.info("Starting SEO optimization")
         
+        # Parallelize these if possible in future, for now sequential
         results = {
             "optimized_text": text,
             "h1": self._generate_h1(text),
             "h2_suggestions": self._generate_h2_suggestions(text),
             "meta_description": self._generate_meta_description(text),
+            "schema_markup": self._generate_schema_markup(text),
             "keyword_density": self._analyze_keyword_density(text, primary_entity),
             "seo_recommendations": []
         }
@@ -54,7 +56,7 @@ class SEOOptimizer:
         
         try:
             h1 = self.llm.generate(user_prompt, system_prompt)
-            return h1.strip()
+            return h1.strip().strip('"')
         except Exception as e:
             logger.error(f"Error generating H1: {e}")
             # Fallback: use first sentence
@@ -62,35 +64,79 @@ class SEOOptimizer:
             return first_sentence[:60] if first_sentence else "News Article"
     
     def _generate_h2_suggestions(self, text):
-        """Generate H2 subheading suggestions"""
-        # Split text into paragraphs
-        paragraphs = text.split('\n\n')
-        h2_suggestions = []
+        """Generate H2 subheading suggestions using LLM"""
+        system_prompt = """Analyze the article text and suggest 3-4 logical H2 subheadings to break up the content.
+        Return the response as a JSON list of strings. Example: ["Introduction context", "Main Event Details", "Implications"]"""
         
-        for i, para in enumerate(paragraphs[:3]):  # Limit to first 3 paragraphs
-            if len(para) > 50:
-                # Simple approach: use first part of paragraph as H2
-                h2 = para[:50] + "..."
-                h2_suggestions.append({
-                    "position": i,
-                    "suggestion": h2
-                })
+        user_prompt = f"""Suggest H2 subheadings for this text:
         
-        return h2_suggestions
-    
+{text[:1500]}"""  # Send enough context
+        
+        try:
+            response = self.llm.generate(user_prompt, system_prompt)
+            # Try to parse JSON, if it fails, split by newlines
+            import json
+            try:
+                # Clean potential markdown code blocks
+                clean_json = response.replace("```json", "").replace("```", "").strip()
+                h2_list = json.loads(clean_json)
+                if isinstance(h2_list, list):
+                    return [{"suggestion": h} for h in h2_list]
+            except json.JSONDecodeError:
+                pass
+                
+            # Fallback parsing
+            lines = [line.strip().lstrip('- ').lstrip('1. ') for line in response.split('\n') if line.strip()]
+            return [{"suggestion": line} for line in lines[:4]]
+            
+        except Exception as e:
+            logger.error(f"Error generating H2s: {e}")
+            return []
+
     def _generate_meta_description(self, text):
-        """Generate SEO-friendly meta description (150-160 chars)"""
-        # Remove HTML tags and extra spaces
-        clean_text = re.sub(r'<[^>]+>', '', text)
-        clean_text = re.sub(r'\s+', ' ', clean_text).strip()
+        """Generate SEO-friendly meta description using LLM"""
+        system_prompt = """Write a compelling SEO meta description for this article.
+        - Maximum 160 characters.
+        - Include relevant keywords.
+        - summarizing the main point.
+        - Return ONLY the description text."""
         
-        # Take first 155-160 characters and end at a word boundary
-        desc = clean_text[:160]
-        last_space = desc.rfind(' ')
-        if last_space > 0 and last_space > 120:
-            desc = desc[:last_space] + "..."
+        user_prompt = f"""Generate a meta description for:
         
-        return desc
+{text[:1000]}"""
+
+        try:
+            desc = self.llm.generate(user_prompt, system_prompt)
+            return desc.strip()
+        except Exception as e:
+            logger.error(f"Error generating meta description: {e}")
+            return text[:157] + "..."
+    
+    def _generate_schema_markup(self, text):
+        """Generate JSON-LD Schema Markup (NewsArticle)"""
+        system_prompt = """Generate a valid JSON-LD Schema.org object for a 'NewsArticle'.
+        Using the provided text, extract/generate:
+        - headline
+        - datePublished (use current ISO datetime if not found)
+        - dateModified (use current ISO datetime)
+        - description
+        - articleBody (first 100 chars...)
+        
+        Return ONLY valid JSON. keys should be "headline", "datePublished", "description", etc."""
+        
+        user_prompt = f"""Generate JSON-LD schema for:
+        
+{text[:1000]}"""
+
+        try:
+            response = self.llm.generate(user_prompt, system_prompt)
+            clean_json = response.replace("```json", "").replace("```", "").strip()
+            # Verify it's valid json (lazy check)
+            import json
+            return json.loads(clean_json)
+        except Exception as e:
+            logger.error(f"Error generating schema: {e}")
+            return {}
     
     def _analyze_keyword_density(self, text, primary_entity=None):
         """Analyze keyword density for optimization"""
@@ -136,5 +182,8 @@ class SEOOptimizer:
         
         if not results["h2_suggestions"]:
             recommendations.append("Add H2 subheadings to improve structure.")
+            
+        if not results.get("schema_markup"):
+             recommendations.append("Schema markup generation failed.")
         
         return recommendations

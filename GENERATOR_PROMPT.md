@@ -1,564 +1,334 @@
-# **GENERATOR_PROMPT.md**
+# GENERATOR_PROMPT.md
 
-## **Sistema SIA-R – Redacción Automática con Integración a WordPress**
+# Especificación completa del Sistema SIA‑R (Redacción Automática, Revisión, Publicación, UI, Tendencias en Tiempo Real)
 
-### **Especificación completa para generación del proyecto**
+Este documento instruye a VS Code / Copilot / Code para **generar el proyecto completo**, asegurando que:
 
----
+* La página principal **funciona desde el primer build**.
+* Los módulos previos permanecen intactos.
+* Los nuevos campos de configuración (palabras clave + URL de WordPress + categorías dinámicas) están integrados y operativos.
+* Las fuentes de tendencias se actualizan **en tiempo real al entrar a la app** y también **de forma periódica**.
 
-# 1. **Nombre del Proyecto**
-
-**sia-r-news-engine**
-
----
-
-# 2. **Objetivo General**
-
-Construir un sistema automatizado de redacción, optimización, auditoría, verificación y publicación de noticias para **eldiademichoacan.com**, con:
-
-* Backend en **Flask**
-* Pipeline **SIA-R**
-* Taxonomía inteligente (moderada + completamente adaptativa)
-* Publicación en **WordPress**
-* Autenticación JWT y API-Key
-* Documentación completa (manual técnico + manual del usuario final)
-* Docker y docker-compose
-* Tests unitarios
-* Scripts de soporte y herramientas internas
-
-El proyecto debe generarse **completo**, con **código funcional**, **carpetas**, **archivos**, **manuales**, **configuraciones**, **scripts** y **documentación PDF**.
+Incluye todas las funciones existentes más las ampliaciones solicitadas.
 
 ---
 
-# 3. **Estructura del Proyecto**
-
-Crear exactamente la siguiente estructura:
+# 1. Arquitectura Completa del Proyecto
 
 ```
-sia-r-news-engine/
-│
-├── app.py
-├── config.py
-├── requirements.txt
-├── .env.example
-├── Dockerfile
-├── docker-compose.yml
-├── README.md
+/ (root)
+│── app.py
+│── config.py
+│── requirements.txt
+│── generator_prompt.md
 │
 ├── services/
-│   ├── cleaner.py
-│   ├── tagger_llm.py
-│   ├── auditor_llm.py
-│   ├── fact_checker.py
-│   ├── verifier.py
-│   ├── humanizer.py
-│   ├── seo_optimizer.py
-│   ├── planner.py
+│   ├── trend_harvester.py
+│   ├── trend_sources/
+│   │     ├── google_trends.py
+│   │     ├── twitter_x.py
+│   │     ├── reddit_hot.py
+│   │     ├── news_api.py
+│   │     └── youtube_trending.py
+│   ├── topic_expander.py
+│   ├── headline_forge.py
+│   ├── article_generator.py
+│   ├── sensitivity_guard.py
+│   ├── veracity_score.py
+│   ├── quality_improver.py
 │   ├── taxonomy_normalizer.py
-│   ├── taxonomy_autolearn.py
-│   ├── wp_client.py
-│   ├── wp_taxonomy_manager.py
-│   ├── jwt_auth.py
-│   ├── api_key_auth.py
-│   ├── metrics_collector.py
-│   ├── llm_client.py
-│
-├── pipeline/
-│   ├── run_pipeline.py
-│   ├── schema.py
+│   ├── content_pipeline.py
+│   └── scheduler.py
 │
 ├── routes/
-│   ├── main.py
-│   ├── auth.py
-│   ├── pipeline_routes.py
-│   ├── wp_routes.py
+│   ├── ui.py
+│   ├── api.py
+│   └── auth.py
 │
-├── storage/
+├── database/
 │   ├── models.py
-│   ├── database.py
-│   ├── migrations/
+│   └── db.sqlite3
 │
-├── docs/
-│   ├── manual_tecnico.md
-│   ├── manual_usuario.md
-│   ├── imagenes/
-│   ├── generar_pdf.py
+├── templates/
+│   ├── index.html
+│   ├── login.html
+│   ├── dashboard.html
+│   ├── review.html
+│   ├── published.html
+│   ├── settings.html
+│   ├── logs.html
+│   └── metrics.html
 │
-└── tests/
-    ├── test_cleaner.py
-    ├── test_tagger.py
-    ├── test_wp_client.py
-    ├── test_pipeline.py
+├── static/
+│   ├── css/
+│   └── js/
+│
+└── docs/
+    ├── manual_usuario.md
+    └── manual_tecnico.md
 ```
 
----
-
-# 4. **Detalles de Implementación**
-
-El sistema debe generar *todo el código y archivos* descritos en este documento.
+Incluye nueva carpeta **trend_sources** para consultas a múltiples proveedores de tendencias, con actualización en tiempo real.
 
 ---
 
-## 4.1. **app.py**
+# 2. Página principal `/` operativa desde el primer build
 
-* Crear instancia de Flask.
-* Registrar Blueprints:
+En `app.py`:
 
-  * main
-  * auth
-  * pipeline
-  * wp
-* Cargar variables desde `.env`.
-* Configurar CORS.
-* Configurar logging estructurado.
-* Inicializar JWT.
-* Cargar autenticación por API-Key.
+```
+from routes.ui import ui_bp
+app.register_blueprint(ui_bp)
+```
 
----
+En `routes/ui.py`:
 
-## 4.2. **config.py**
+```
+@ui_bp.route("/")
+def home():
+    return render_template(
+        "index.html",
+        status=get_pipeline_status(),
+        keywords=get_current_keywords(),
+        wp_site=get_wp_site_url(),
+        wp_categories=get_wp_categories(),
+        last_trends=get_recent_trends()
+    )
+```
 
-Debe contener:
+La página `index.html` DEBE incluir:
 
-* OPENAI_API_KEY
-* JWT_SECRET
-* API_KEY_MASTER
-* WP_BASE_URL
-* WP_USERNAME / WP_PASSWORD
-* DB_URL
-* CONFIG DEL PIPELINE SIA-R
-* CONFIG DEL TAXONOMY AUTO-LEARN
-
----
-
-# 5. **Servicios (services/)**
-
-Generar **código real** para cada módulo, no pseudo-código.
+* Estado general del sistema
+* **Panel con palabras clave activas**
+* **Sitio WordPress configurado**
+* **Categorias cargadas en vivo desde WP**
+* Tendencias recogidas automáticamente al entrar
+* Botón para ejecutar el pipeline manualmente
 
 ---
 
-## 5.1. cleaner.py
-
-Funciones:
-
-* eliminación de ruido
-* normalización unicode
-* limpieza de HTML innecesario
-* eliminación de duplicados
-* corrección básica de estilo
-
----
-
-## 5.2. tagger_llm.py
-
-Uso de LLM:
-
-* extracción de categorías sugeridas
-* etiquetas sugeridas
-* entidades
-* tono periodístico
-
-Debe devolver JSON estructurado.
-
----
-
-## 5.3. auditor_llm.py
-
-Auditoría:
-
-* calidad narrativa
-* factualidad preliminar
-* agresividad
-* neutralidad
-* mejoras sugeridas
-
----
-
-## 5.4. fact_checker.py
-
-Incluye:
-
-* heurísticas básicas
-* detección de inconsistencias
-* comparación con bases públicas
-* indicadores de riesgo
-
----
-
-## 5.5. verifier.py
-
-Valida:
-
-* coherencia final
-* duplicación de ideas
-* detección de contradicciones
-
----
-
-## 5.6. humanizer.py
-
-* humanización del texto
-* ritmo periodístico
-* tono neutral profesional
-* evita estilo robótico
-
----
-
-## 5.7. seo_optimizer.py
-
-Optimiza:
-
-* H1, H2, H3
-* metadescripción
-* densidad
-* entidad principal
-* extractos SEO
-
----
-
-## 5.8. planner.py
-
-* determina fecha de publicación
-* determina categorías WP finales
-* modo “auto-publicar”
-* estrategia de distribución
-
----
-
-## 5.9. taxonomy_normalizer.py
-
-**Taxonomía moderada**
-
-* corregir acentos
-* unificar duplicados
-* aplicar sinónimos base
-* mapear 1:1 a categorías del WP existente
-
----
-
-## 5.10. taxonomy_autolearn.py
-
-**Taxonomía completamente adaptativa**
-
-Debe implementar:
-
-* carga de estadísticas de tráfico real
-* aprendizaje diario automático
-* generación de nuevas relaciones:
-
-  * sinónimos
-  * asociaciones
-  * fusión de categorías
-* actualización de archivo `profile.json`
-* sistema de puntuación por relevancia
-
----
-
-## 5.11. wp_client.py
-
-Funciones:
-
-* obtener token WP
-* crear post
-* actualizar post
-* subir imágenes destacadas
-
----
-
-## 5.12. wp_taxonomy_manager.py
-
-Crear categorías y tags en WP si no existen:
-
-* `ensure_category(name)`
-* `ensure_tag(name)`
-* devuelve ID válido para WP
-
----
-
-## 5.13. jwt_auth.py
-
-## 5.14. api_key_auth.py
-
-Crear autenticación completa:
-
-* acceso por JWT
-* login y refresh
-* API-Key rotables almacenadas en SQLite
-
----
-
-## 5.15. metrics_collector.py
-
-* almacenar logs de pipeline
-* almacenar éxito/fallas
-* almacenar tráfico de cada categoría
-
----
-
-## 5.16. llm_client.py
-
-Wrapper:
-
-* OpenAI GPT
-* adjustable model
-* retries
-* timeout
-
----
-
-# 6. **Pipeline**
-
-## run_pipeline.py
-
-Debe:
-
-1. Recibir entrada (texto inicial)
-2. Ejecutar:
-
-   * cleaner
-   * tagger
-   * auditor
-   * fact-check
-   * verifier
-   * humanizer
-   * seo optimizer
-   * planner
-3. Crear JSON final
-4. Registrar logs en DB
-5. Retornar respuesta final completa
-
----
-
-## schema.py
-
-* Definir modelos de entrada/salida del pipeline
-* Validación con Pydantic
-
----
-
-# 7. **Rutas Flask**
-
-## main.py
-
-* `/api/status`
-
-## auth.py
-
-* `/api/auth/login`
-* `/api/auth/refresh`
-
-## pipeline_routes.py
-
-* `/api/pipeline/run`
-* `/api/pipeline/simulate`
-
-## wp_routes.py
-
-* `/api/wp/post`
-* `/api/wp/taxonomies`
-* `/api/wp/rebuild-taxonomy-profiles`
-
-## Interfaz visual local — UI / Dashboard (localhost:8000)
-
-### Resumen
-
-El sistema debe exponer una interfaz web en `http://localhost:8000` (puerto configurable) que permita a editores y administradores operar el pipeline, revisar artículos y controlar la publicación automática. Usar Flask + templates Jinja2 + Bootstrap 5. La UI debe integrarse con autenticación y API Key.
-
-### Páginas / Vistas necesarias
-
-1. `/` — Página de estado (mini dashboard)
-2. `/login` — Login
-3. `/dashboard` — Lista de items en revisión
-4. `/review/view/<id>` — Vista de revisión con comparador
-5. `/pipeline/run` — Ejecutar pipeline manualmente
-6. `/published` — Artículos publicados vía SIA-R
-7. `/settings` — Configuración (admin)
-8. `/logs` — Logs del pipeline
-9. `/metrics` — Gráficos estadísticos
-
-### Endpoints REST adicionales
+# 3. Dashboard `/dashboard`
+
+Tecnologías:
+
+* Flask
+* Jinja2
+* Bootstrap 5
+* JWT + Cookies seguras
+* CSRF Protection
+
+Páginas:
+
+1. `/` – Dashboard general
+2. `/login`
+3. `/dashboard`
+4. `/review/view/<id>`
+5. `/pipeline/run`
+6. `/published`
+7. `/settings`
+8. `/logs`
+9. `/metrics`
+
+Endpoints REST obligatorios:
 
 * `GET /api/ui/status`
-* `GET /api/ui/reviews?status=pending`
-* `GET /api/ui/review/<id>`
+* `GET /api/ui/reviews`
 * `POST /api/ui/review/<id>/approve`
 * `POST /api/ui/review/<id>/reject`
 * `POST /api/ui/run`
-* `GET /api/ui/published`
-* `GET /api/ui/settings`
-* `POST /api/ui/settings`
-
-### Controles de Auto-Publicación
-
-Parámetros clave:
-
-* `min_veracity_to_auto_publish`
-* `max_risk_to_auto_publish`
-* `allow_auto_publish_categories`
-* `require_editor_for_sensitive_topics`
-
-### Previsualización
-
-Generar vista HTML local y opción de draft en WordPress.
-
-### Seguridad / Roles
-
-* `editor`: revisar y aprobar
-* `admin`: manejar configuración y API keys
-
-### Notas técnicas
-
-* Templates en `templates/`
-* CSS en `static/css/`
-* JS en `static/js/`
-* Protección CSRF
-
-### Workflow UI + pipeline
-
-1. Se ejecuta pipeline
-2. Auto-publish o envío a revisión
-3. Editor revisa y aprueba/rechaza
-4. Publicación final en WordPress
-
-### Requisitos UX
-
-* Modo oscuro
-* Tabla paginada
-* Filtros y búsqueda
-
-### Pruebas UI
-
-* Tests end-to-end con `pytest` y `requests`
-
-### Salida esperada
-
-* Archivos HTML en `templates/`
-* Endpoints para UI
-* JS para interacción
-* Documentación en `docs/manual_usuario.md`
+* `GET /api/wp/categories`
+* `POST /api/settings/keywords`
+* `POST /api/settings/wp`
 
 ---
 
-# 8. **Base de Datos**
+# 4. NUEVA Configuración avanzada en el Dashboard
 
-## database.py
+## 4.1. Cuadro de texto para palabras o frases clave
 
-* SQLAlchemy
-* conexión y sesión
+Debe aparecer en el Dashboard principal, no en Settings.
 
-## models.py
+Campo:
 
-Tablas:
+```
+<textarea name="trend_keywords"></textarea>
+```
 
-* Users
-* ApiKeys
-* PipelineLogs
-* TaxonomyStats
-* AutoLearnProfile (sinónimos, patrones, pesos)
+Almacena en la tabla `settings`:
 
----
+* `id`
+* `trend_keywords` (texto plano)
+* `wp_url`
+* `selected_categories`
 
-# 9. **Docker**
+Uso:
 
-### Dockerfile
+* Es insumo directo para `trend_harvester.py`.
+* Se actualiza cada vez que el usuario guarda cambios.
 
-* python:3.10
-* gunicorn
-* dependencias
-* puerto 8000
+## 4.2. Configuración directa del sitio WordPress
 
-### docker-compose.yml
+```
+<input name="site_url" value="https://eldiademichoacan.com" />
+```
 
-* backend (Flask + gunicorn)
-* volúmenes persistentes
+a) Controla la API base
+b) Controla extracción de categorías
+c) Se usa para publicar artículos
 
----
+## 4.3. Carga automática de categorías desde WordPress
 
-# 10. **Tests**
+Al ingresar al Dashboard o al guardar nueva URL:
 
-Crear pruebas reales:
+1. Llamar: `/wp-json/wp/v2/categories?per_page=100`.
+2. Guardar resultado en DB.
+3. Mostrar Multi‑Select:
 
-* test_cleaner.py
-* test_tagger.py
-* test_wp_client.py
-* test_pipeline.py
+```
+<select multiple name="wp_categories[]">
+   <option value="ID">Nombre</option>
+</select>
+```
 
----
-
-# 11. **Documentación**
-
-## docs/manual_tecnico.md
-
-Incluir:
-
-* arquitectura
-* instalación
-* flujo interno
-* modelos de datos
-* endpoints
-* uso del pipeline
-* taxonomía adaptativa
-* seguridad
-* esquemas JSON
-* diagramas en ASCII o mermaid
-
-## docs/manual_usuario.md
-
-Incluir:
-
-* cómo iniciar sesión
-* cómo usar `/run`
-* cómo publicar en WP
-* cómo revisar sugerencias
-* ejemplos de entradas
-* ejemplos de salidas
-* capturas (usar placeholders)
-* pasos numerados
-
-## docs/generar_pdf.py
-
-Crear script en Python que:
-
-* lea ambos `.md`
-* genere PDF con:
-
-  * portada
-  * índice
-  * estilos básicos
-  * imágenes de `/docs/imagenes/`
+Se elimina duplicidad en Settings → Integraciones.
+Toda la configuración vive ahora en el Dashboard.
 
 ---
 
-# 12. **Sugerencias de Mejora (Incluir)**
+# 5. Sistema de Tendencias en Tiempo Real
 
-* logging JSON
-* modo extremo de SEO
-* detección automática de viralidad
-* integración con Cloudflare Cache Purge
-* endpoint de diagnóstico
-* sistema de actualización de modelos
-* sistema de autoetiquetado por boost patterns
+## 5.0. Gestión de claves y valores para actualizaciones en tiempo real
+
+Todas las credenciales necesarias para consultar fuentes externas (por ejemplo, API Keys de Twitter/X, NewsAPI, YouTube, etc.) **deben almacenarse obligatoriamente en el archivo `.env`**, y nunca en el código fuente.
+
+El sistema debe:
+
+* Cargar automáticamente las variables desde `.env` mediante `python-dotenv`.
+* Validar en tiempo de ejecución si alguna clave falta.
+* Registrar advertencias en el log si alguna API Key está caducada o ausente.
+* Permitir que el usuario final pueda actualizar sus claves desde el **Manual de Usuario**, donde deben incluirse:
+
+  * Pasos para generar cada API Key.
+  * Pasos para agregar o actualizar los valores dentro del archivo `.env`.
+  * Qué hacer si una clave expira.
+
+Ejemplos de claves esperadas:
+
+```
+TWITTER_API_KEY=
+TWITTER_API_SECRET=
+NEWSAPI_KEY=
+YOUTUBE_API_KEY=
+```
+
+Estas claves se usan en la recolección de tendencias y en cualquier endpoint que requiera autenticación externa.
+(Actualización inmediata + periódica)
+
+## 5.1. Al cargar la app (Dashboard o `/`):
+
+Debe ejecutarse automáticamente:
+
+```
+fetch_trends_realtime()
+```
+
+## 5.2. Fuentes incluidas obligatorias
+
+* Google Trends
+* Twitter/X tendencias
+* Noticias recientes (NewsAPI o RSS)
+* Videos populares (YouTube Trending)
+* Reddit Hot / Top
+* Búsquedas locales basadas en palabras clave personalizadas
+
+## 5.3. Algoritmo consolidado
+
+`trend_harvester.py` debe combinar todas las fuentes y generar una lista de tendencias normalizadas.
 
 ---
 
-# 13. **Entrega esperada**
+# 6. Pipeline de generación masiva de contenido
 
-El generador debe construir:
+Secuencia obligatoria:
 
-* TODO el código
-* TODAS las carpetas
-* TODOS los archivos
-* Documentación técnica
-* Manual del usuario
-* Scripts PDF
-* Proyecto listo para ejecutar con:
+1. `fetch_trends()` usando las palabras clave
+2. `expand_topics()`
+3. `generate_headlines()`
+4. `generate_articles()`
+5. `check_sensitivity()`
+6. `check_veracity()`
+7. `rewrite_quality()`
+8. `normalize_taxonomy()`
+9. Guardar en DB
 
-  * `docker-compose up --build`
-  * `python app.py`
-* Proyecto listo para importar a un servidor Linux
+Tabla `articles`:
+
+* id
+* headline
+* content
+* category_list
+* tag_list
+* risk_score
+* veracity_score
+* status (pending, approved, rejected, published)
+* created_at
+* updated_at
 
 ---
 
-# Fin del documento
+# 7. Auto‑Publicación en WordPress
 
-Este archivo define **la especificación íntegra** que debe generar el entorno de IA.
+Condiciones:
+
+* `risk_score <= max_risk_to_auto_publish`
+* `veracity_score >= min_veracity_to_auto_publish`
+* Categoría seleccionada por el usuario
+* No contener palabras prohibidas
+
+Publicación vía:
+`POST /wp-json/wp/v2/posts`
+
+Debe soportar:
+
+* imágenes destacadas (media upload)
+* categorías
+* tags
+
+---
+
+# 8. Cron Jobs
+
+En `scheduler.py`:
+
+* Cada 10 minutos → generar artículos
+* Cada hora → actualizar tendencias
+* Cada día → mantenimiento
+* Al cargar la UI → ejecutar actualización rápida de tendencias
+
+---
+
+# 9. Manuales
+
+Generar automáticamente:
+
+* `docs/manual_usuario.md`
+* `docs/manual_tecnico.md`
+
+Exportables a PDF.
+
+---
+
+# 10. Resultado esperado
+
+VS Code debe generar un sistema completo que incluya:
+
+* Página principal funcional con tendencias en tiempo real
+* Dashboard con campos expandido (keywords + WP URL + categorías)
+* Módulos históricos intactos
+* Integración WordPress completa
+* Multi‑fuente de tendencias
+* Auto‑publicación confiable
+* Cron jobs operativos
+* UI lista para uso profesional
+
+**Todo debe estar funcionando desde el primer build, sin errores y sin páginas vacías.**

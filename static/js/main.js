@@ -70,13 +70,13 @@ async function apiCall(endpoint, options = {}) {
 
     try {
         const response = await fetch(endpoint, finalOptions);
-        
+
         if (response.status === 401) {
             clearToken();
             window.location.href = '/login';
             return null;
         }
-        
+
         return await response.json();
     } catch (error) {
         console.error('API Error:', error);
@@ -138,16 +138,16 @@ function showToast(message, type = 'info') {
             </div>
         </div>
     `;
-    
+
     // Add toast to body
     const container = document.getElementById('toast-container') || createToastContainer();
     container.insertAdjacentHTML('beforeend', toastHtml);
-    
+
     // Show toast
     const toastEl = document.getElementById(toastId);
     const toast = new bootstrap.Toast(toastEl);
     toast.show();
-    
+
     // Remove after it hides
     toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
 }
@@ -225,7 +225,7 @@ function formatTimeAgo(date) {
     if (typeof date === 'string') {
         date = new Date(date);
     }
-    
+
     const seconds = Math.floor((new Date() - date) / 1000);
     let interval = seconds / 31536000;
 
@@ -305,10 +305,12 @@ function formatNumber(num) {
  * Initialize dark mode
  */
 function initDarkMode() {
+    console.log("Initializing dark mode...");
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
+
     const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+    console.log("Applying theme:", theme);
     setTheme(theme);
 }
 
@@ -318,7 +320,7 @@ function initDarkMode() {
 function setTheme(theme) {
     document.documentElement.setAttribute('data-bs-theme', theme);
     localStorage.setItem('theme', theme);
-    
+
     // Update theme icon
     const themeIcon = document.getElementById('theme-icon');
     if (themeIcon) {
@@ -368,13 +370,13 @@ function isValidUrl(url) {
  */
 function getPasswordStrength(password) {
     let strength = 0;
-    
+
     if (password.length >= 8) strength++;
     if (password.length >= 12) strength++;
     if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
     if (/\d/.test(password)) strength++;
     if (/[^a-zA-Z\d]/.test(password)) strength++;
-    
+
     return strength;
 }
 
@@ -388,7 +390,7 @@ function getPasswordStrength(password) {
 function disableButton(btnSelector, loadingText = 'Cargando...') {
     const btn = document.querySelector(btnSelector);
     if (!btn) return;
-    
+
     btn.disabled = true;
     btn.dataset.originalText = btn.innerHTML;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + loadingText;
@@ -400,7 +402,7 @@ function disableButton(btnSelector, loadingText = 'Cargando...') {
 function enableButton(btnSelector) {
     const btn = document.querySelector(btnSelector);
     if (!btn) return;
-    
+
     btn.disabled = false;
     btn.innerHTML = btn.dataset.originalText || 'Enviar';
 }
@@ -429,20 +431,20 @@ function sortTable(tableId, columnIndex) {
     const table = document.getElementById(tableId);
     let rows = Array.from(table.querySelectorAll('tbody tr'));
     let isAscending = table.dataset.sortAsc !== 'true';
-    
+
     rows.sort((a, b) => {
         const aValue = a.children[columnIndex].textContent;
         const bValue = b.children[columnIndex].textContent;
-        
+
         if (!isNaN(aValue) && !isNaN(bValue)) {
             return isAscending ? aValue - bValue : bValue - aValue;
         }
-        
-        return isAscending ? 
-            aValue.localeCompare(bValue) : 
+
+        return isAscending ?
+            aValue.localeCompare(bValue) :
             bValue.localeCompare(aValue);
     });
-    
+
     table.dataset.sortAsc = isAscending;
     rows.forEach(row => table.querySelector('tbody').appendChild(row));
 }
@@ -457,9 +459,9 @@ function sortTable(tableId, columnIndex) {
 function createPagination(currentPage, totalPages, onPageChange) {
     const paginationEl = document.getElementById('pagination');
     if (!paginationEl) return;
-    
+
     paginationEl.innerHTML = '';
-    
+
     // Previous button
     const prevLi = document.createElement('li');
     prevLi.className = 'page-item' + (currentPage === 1 ? ' disabled' : '');
@@ -469,7 +471,7 @@ function createPagination(currentPage, totalPages, onPageChange) {
         </a>
     `;
     paginationEl.appendChild(prevLi);
-    
+
     // Page numbers
     for (let i = 1; i <= totalPages; i++) {
         if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
@@ -479,7 +481,7 @@ function createPagination(currentPage, totalPages, onPageChange) {
             paginationEl.appendChild(li);
         }
     }
-    
+
     // Next button
     const nextLi = document.createElement('li');
     nextLi.className = 'page-item' + (currentPage === totalPages ? ' disabled' : '');
@@ -511,10 +513,10 @@ function exportToCSV(filename, data) {
  */
 function convertToCSV(data) {
     if (!data || data.length === 0) return '';
-    
+
     const headers = Object.keys(data[0]);
     const csv = [headers.join(',')];
-    
+
     data.forEach(row => {
         const values = headers.map(header => {
             const value = row[header];
@@ -526,7 +528,7 @@ function convertToCSV(data) {
         });
         csv.push(values.join(','));
     });
-    
+
     return csv.join('\n');
 }
 
@@ -548,10 +550,21 @@ function exportToJSON(filename, data) {
 /**
  * Load trends from backend and render grid
  */
+/**
+ * Load trends from backend and render grid
+ */
 async function loadTrends(forceRefresh = false) {
     try {
-        // Request flattened trends (combined from all sources)
-        const url = forceRefresh ? '/api/ui/trends?force=1&flatten=1' : '/api/ui/trends?flatten=1';
+        const keywords = document.getElementById('trendKeywords')?.value || '';
+        let url = '/api/ui/trends?flatten=1';
+
+        if (forceRefresh) {
+            url += '&force=1';
+        }
+        if (keywords) {
+            url += `&keywords=${encodeURIComponent(keywords)}`;
+        }
+
         const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + getToken() } });
         const data = await resp.json();
 
@@ -562,7 +575,7 @@ async function loadTrends(forceRefresh = false) {
 
         // Handle both flat array and nested object responses
         let trendsList = [];
-        
+
         if (Array.isArray(data.trends)) {
             // Flat array response (from ?flatten=1)
             trendsList = data.trends;
@@ -582,89 +595,158 @@ async function loadTrends(forceRefresh = false) {
 
         // Add source label if available
         if (data.sources && data.sources.length > 1) {
-            const sourceLabel = document.createElement('div');
-            sourceLabel.className = 'alert alert-info text-sm';
-            sourceLabel.innerHTML = `<small>Tendencias de: ${data.sources.join(', ')}</small>`;
-            container.parentElement.insertBefore(sourceLabel, container);
+            // Check if label already exists to avoid duplicates
+            const existingLabel = container.parentElement.querySelector('.alert-info.text-sm');
+            if (!existingLabel) {
+                const sourceLabel = document.createElement('div');
+                sourceLabel.className = 'alert alert-info text-sm';
+                sourceLabel.innerHTML = `<small>Tendencias de: ${data.sources.join(', ')}</small>`;
+                container.parentElement.insertBefore(sourceLabel, container);
+            }
         }
 
-        trendsList.forEach(tr => {
+        trendsList.forEach(trend => {
             const card = document.createElement('div');
-            card.className = 'trend-card';
+            card.className = 'trend-card p-3';
 
-            // create inner structure
-            const inner = document.createElement('div');
-            inner.className = 'trend-card-inner';
+            // Limit summary length
+            const summaryShort = trend.summary ? (trend.summary.length > 100 ? trend.summary.substring(0, 100) + '...' : trend.summary) : 'Sin resumen';
 
-            const header = document.createElement('div');
-            header.className = 'trend-header';
-            header.innerHTML = `<h6 class="mb-1">${escapeHtml(tr.title)}</h6><small class="text-muted">${tr.source} · ${tr.category || 'General'}</small>`;
+            card.innerHTML = `
+                <div class="trend-header d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0 text-truncate" title="${escapeHtml(trend.title)}">${escapeHtml(trend.title)}</h6>
+                    <span class="badge bg-light text-dark border ms-2">${trend.traffic || 'N/A'}</span>
+                </div>
+                <div class="trend-summary small text-muted mb-2">
+                    ${escapeHtml(summaryShort)}
+                </div>
+                <div class="trend-meta d-flex justify-content-between align-items-center">
+                    <span class="badge bg-secondary opacity-75">${trend.source || 'General'}</span>
+                    <button class="btn btn-sm btn-outline-primary use-trend-btn">
+                        <i class="bi bi-magic"></i> Usar
+                    </button>
+                </div>
+            `;
 
-            const summary = document.createElement('p');
-            summary.className = 'trend-summary text-truncate';
-            summary.textContent = tr.summary || '';
-
-            const meta = document.createElement('div');
-            meta.className = 'trend-meta d-flex justify-content-between align-items-center';
-
-            const scoreDiv = document.createElement('div');
-            scoreDiv.innerHTML = `<span class="badge bg-primary">Score ${tr.score || 75}</span>`;
-
-            const actionDiv = document.createElement('div');
-
-            // Create Bootstrap split-button group: primary action + dropdown fallback
-            const group = document.createElement('div');
-            group.className = 'btn-group';
-
-            const primary = document.createElement('button');
-            primary.className = 'btn btn-sm btn-outline-success';
-            primary.textContent = 'Seleccionar';
-            primary.addEventListener('click', function () {
-                selectTrendJson(JSON.stringify(tr));
-            });
-
-            const toggle = document.createElement('button');
-            toggle.className = 'btn btn-sm btn-outline-success dropdown-toggle dropdown-toggle-split';
-            toggle.setAttribute('data-bs-toggle', 'dropdown');
-            toggle.setAttribute('aria-expanded', 'false');
-
-            const menu = document.createElement('ul');
-            menu.className = 'dropdown-menu dropdown-menu-end';
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.className = 'dropdown-item';
-            a.href = '#';
-            a.textContent = 'Abrir en nueva pestaña';
-            a.addEventListener('click', function (ev) {
-                ev.preventDefault();
+            // Attach event listener safely
+            const btn = card.querySelector('.use-trend-btn');
+            btn.dataset.trend = JSON.stringify(trend);
+            btn.addEventListener('click', function () {
                 try {
-                    localStorage.setItem('selected_trend', JSON.stringify(tr));
-                } catch (err) { console.error('Error saving trend for new tab', err); }
-                window.open('/pipeline/run', '_blank');
+                    const trendData = JSON.parse(this.dataset.trend);
+                    selectTrend(trendData);
+                } catch (e) {
+                    console.error('Error parsing trend data', e);
+                    showToast('Error al seleccionar tendencia', 'danger');
+                }
             });
-
-            li.appendChild(a);
-            menu.appendChild(li);
-
-            group.appendChild(primary);
-            group.appendChild(toggle);
-            group.appendChild(menu);
-
-            actionDiv.appendChild(group);
-            meta.appendChild(scoreDiv);
-            meta.appendChild(actionDiv);
-
-            inner.appendChild(header);
-            inner.appendChild(summary);
-            inner.appendChild(meta);
-            card.appendChild(inner);
 
             container.appendChild(card);
         });
 
+    } catch (error) {
+        console.error('Error loading trends:', error);
+        showToast('Error al cargar tendencias', 'danger');
+    }
+}
+
+/**
+ * Load trends for the Pipeline page sidebar
+ */
+async function loadTrendsForPipeline(limit = 10) {
+    const container = document.getElementById('pipeline-trends-list');
+    if (!container) return;
+
+    try {
+        const resp = await fetch(`/api/ui/trends?flatten=1&limit=${limit}`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const data = await resp.json();
+
+        container.innerHTML = '';
+
+        let trendsList = [];
+        if (Array.isArray(data.trends)) {
+            trendsList = data.trends;
+        } else if (typeof data.trends === 'object' && data.trends !== null) {
+            Object.values(data.trends).forEach(arr => {
+                if (Array.isArray(arr)) trendsList = trendsList.concat(arr);
+            });
+        }
+
+        if (!trendsList || trendsList.length === 0) {
+            container.innerHTML = '<div class="text-muted small">No hay tendencias disponibles.</div>';
+            return;
+        }
+
+        trendsList.slice(0, limit).forEach(trend => {
+            const item = document.createElement('div');
+            item.className = 'border-bottom pb-2 mb-2 trend-item';
+            item.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <strong class="d-block small mb-1" title="${escapeHtml(trend.title)}">${escapeHtml(trend.title)}</strong>
+                    <button class="btn btn-xs btn-link p-0 apply-trend-btn ms-2 flex-shrink-0">
+                        <i class="bi bi-plus-circle"></i>
+                    </button>
+                </div>
+                <small class="text-muted d-block" style="font-size: 0.75rem;">${trend.source || 'General'}</small>
+            `;
+
+            // Attach event listener safely
+            const btn = item.querySelector('.apply-trend-btn');
+            btn.addEventListener('click', function () {
+                applyTrendToPipeline(trend);
+            });
+
+            container.appendChild(item);
+        });
+
     } catch (err) {
-        console.error('Error loading trends', err);
-        showToast('No se pudieron cargar las tendencias', 'danger');
+        console.error('Error loading pipeline trends:', err);
+        container.innerHTML = '<div class="text-danger small">Error al cargar.</div>';
+    }
+}
+
+/**
+ * Apply selected trend to the pipeline form
+ */
+function applyTrendToPipeline(trendJson) {
+    try {
+        let trend = trendJson;
+        if (typeof trendJson === 'string') {
+            trend = JSON.parse(trendJson);
+        }
+
+        const titleEl = document.getElementById('article-title');
+        const contentEl = document.getElementById('article-content');
+        const categoryEl = document.getElementById('article-category');
+        const urlEl = document.getElementById('article-url');
+
+        if (titleEl) titleEl.value = trend.title || titleEl.value;
+        if (contentEl) contentEl.value = (trend.summary ? trend.summary + '\n\nFuente: ' + (trend.source || '') : '') || contentEl.value;
+
+        if (categoryEl && trend.category) {
+            const opt = Array.from(categoryEl.options).find(o => o.value === trend.category);
+            if (opt) categoryEl.value = trend.category;
+        }
+
+        if (urlEl && trend.url) urlEl.value = trend.url;
+
+        // store selection for later reference
+        localStorage.setItem('selected_trend', JSON.stringify(trend));
+
+        // show banner
+        const banner = document.getElementById('selected-trend-banner');
+        const bannerText = document.getElementById('selected-trend-text');
+        if (banner && bannerText) {
+            bannerText.textContent = `Tendencia precargada: ${trend.title} (${trend.source})`;
+            banner.style.display = 'block';
+        }
+
+        showToast(`Tendencia cargada en formulario: ${trend.title}`, 'success');
+    } catch (err) {
+        console.error('Error applying trend to pipeline', err);
+        showToast('No se pudo cargar la tendencia en el formulario', 'danger');
     }
 }
 
@@ -689,7 +771,7 @@ function selectTrendJson(jsonPayload) {
         showToast(`Tendencia seleccionada: ${trend.title}`, 'success');
         // Small delay to allow the toast to render, then navigate to pipeline page
         console.log('Selected trend saved, redirecting to /pipeline/run');
-        setTimeout(function() {
+        setTimeout(function () {
             try {
                 window.location.assign('/pipeline/run');
             } catch (err) {
@@ -703,73 +785,24 @@ function selectTrendJson(jsonPayload) {
     }
 }
 
+
+
 /**
- * Load trends specifically for the pipeline page and render as a selectable list.
+ * Apply a trend object to the pipeline form fields without navigating.
  */
-async function loadTrendsForPipeline(limit = 8) {
+/**
+ * Select trend from dashboard and redirect to pipeline
+ */
+function selectTrend(trendJson) {
     try {
-        const resp = await fetch(`/api/ui/trends?live=1&limit=${limit}`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
-        const data = await resp.json();
+        // trendJson might be an object string or object
+        const trend = typeof trendJson === 'string' ? JSON.parse(trendJson) : trendJson;
 
-        const container = document.getElementById('pipeline-trends-list');
-        if (!container) return;
-
-        container.innerHTML = '';
-
-        if (!data || !data.trends || data.trends.length === 0) {
-            container.innerHTML = '<div class="text-muted">No se encontraron tendencias</div>';
-            return;
-        }
-
-        const table = document.createElement('table');
-        table.className = 'table table-hover';
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Título</th>
-                    <th>Fuente</th>
-                    <th>Categoría</th>
-                    <th>Score</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        `;
-
-        const tbody = table.querySelector('tbody');
-
-        data.trends.forEach(tr => {
-            const trEl = document.createElement('tr');
-            trEl.innerHTML = `
-                <td class="align-middle">${escapeHtml(tr.title)}</td>
-                <td class="align-middle"><small class="text-muted">${escapeHtml(tr.source)}</small></td>
-                <td class="align-middle">${escapeHtml(tr.category || '')}</td>
-                <td class="align-middle"><span class="badge bg-primary">${tr.score}</span></td>
-                <td class="align-middle text-end"><button class="btn btn-sm btn-outline-primary">Cargar</button></td>
-            `;
-
-            // clicking row also applies trend
-            trEl.addEventListener('click', function (ev) {
-                // avoid double handling when clicking button
-                if (ev.target && ev.target.tagName.toLowerCase() === 'button') return;
-                applyTrendToPipeline(tr);
-            });
-
-            const btn = trEl.querySelector('button');
-            btn.addEventListener('click', function (ev) {
-                ev.stopPropagation();
-                applyTrendToPipeline(tr);
-            });
-
-            tbody.appendChild(trEl);
-        });
-
-        container.appendChild(table);
-
+        localStorage.setItem('selected_trend', JSON.stringify(trend));
+        window.location.href = '/pipeline/run';
     } catch (err) {
-        console.error('Error loading pipeline trends', err);
-        const container = document.getElementById('pipeline-trends-list');
-        if (container) container.innerHTML = '<div class="text-danger">Error cargando tendencias</div>';
+        console.error('Error selecting trend', err);
+        showToast('Error al seleccionar tendencia', 'danger');
     }
 }
 
@@ -789,6 +822,7 @@ function applyTrendToPipeline(trend) {
             const opt = Array.from(categoryEl.options).find(o => o.value === trend.category);
             if (opt) categoryEl.value = trend.category;
         }
+
         if (urlEl && trend.url) urlEl.value = trend.url;
 
         // store selection for later reference
@@ -800,6 +834,15 @@ function applyTrendToPipeline(trend) {
         if (banner && bannerText) {
             bannerText.textContent = `Tendencia precargada: ${trend.title} (${trend.source})`;
             banner.style.display = 'block';
+        }
+
+        const clearBtn = document.getElementById('clear-trend-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                localStorage.removeItem('selected_trend');
+                if (banner) banner.style.display = 'none';
+                showToast('Selección eliminada', 'info');
+            });
         }
 
         showToast(`Tendencia cargada en formulario: ${trend.title}`, 'success');
@@ -814,26 +857,26 @@ function applyTrendToPipeline(trend) {
  */
 function escapeHtml(unsafe) {
     if (!unsafe) return '';
-    return unsafe.replace(/[&<>"']/g, function(m) {
-        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"})[m];
+    return unsafe.replace(/[&<>"']/g, function (m) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#039;" })[m];
     });
 }
 
 function escapeJs(s) {
     if (!s) return '';
-    return s.replace(/'/g, "\\'").replace(/"/g, '\\"');
+    return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
 }
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Initialize dark mode
     initDarkMode();
-    
+
     // Redirect if not authenticated (except on login page)
     if (!window.location.pathname.includes('/login')) {
         redirectIfNotAuth();
     }
-    
+
     // Initialize Bootstrap tooltips and popovers
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -850,7 +893,7 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function handleApiError(error, defaultMessage = 'Ocurrió un error') {
     console.error('Error:', error);
-    
+
     if (error.response) {
         const message = error.response.data?.error || error.response.data?.message || defaultMessage;
         showError(message);
@@ -864,7 +907,7 @@ function handleApiError(error, defaultMessage = 'Ocurrió un error') {
 /**
  * Global error handler
  */
-window.addEventListener('error', function(event) {
+window.addEventListener('error', function (event) {
     console.error('Global error:', event.error);
     showError('Ocurrió un error inesperado');
 });
@@ -872,7 +915,33 @@ window.addEventListener('error', function(event) {
 /**
  * Global unhandled promise rejection handler
  */
-window.addEventListener('unhandledrejection', function(event) {
+window.addEventListener('unhandledrejection', function (event) {
     console.error('Unhandled promise rejection:', event.reason);
     showError('Ocurrió un error inesperado');
+});
+
+function updateTrendsWithKeywords() {
+    const keywordsInput = document.getElementById('trendKeywords');
+    if (!keywordsInput) return;
+
+    // Save keywords to localStorage
+    try {
+        localStorage.setItem('trendKeywords', keywordsInput.value);
+    } catch (err) {
+        console.error('Error saving keywords to localStorage', err);
+    }
+
+    // Reload trends with the new keywords
+    loadTrends(true);
+}
+
+// Load saved keywords on page load
+document.addEventListener('DOMContentLoaded', function () {
+    const keywordsInput = document.getElementById('trendKeywords');
+    if (keywordsInput) {
+        const savedKeywords = localStorage.getItem('trendKeywords');
+        if (savedKeywords) {
+            keywordsInput.value = savedKeywords;
+        }
+    }
 });

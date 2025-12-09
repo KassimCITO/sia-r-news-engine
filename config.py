@@ -5,8 +5,8 @@ load_dotenv()
 
 # === OPENAI CONFIGURATION ===
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4")
-OPENAI_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")  # Changed from gpt-4 to gpt-3.5-turbo for better compatibility
+OPENAI_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.3"))  # Lowered from 0.7 to 0.3 for more factual, consistent news generation
 OPENAI_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "2000"))
 
 # === JWT CONFIGURATION ===

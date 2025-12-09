@@ -1,13 +1,10 @@
-import openai
+from openai import OpenAI
+import httpx
 import time
 import logging
 from config import OPENAI_API_KEY, OPENAI_MODEL, OPENAI_TEMPERATURE, OPENAI_MAX_TOKENS
 
 logger = logging.getLogger(__name__)
- 
-# Use legacy top-level openai API with api_key to avoid httpx client init
-openai.api_key = OPENAI_API_KEY
-
 
 class LLMClient:
     """Wrapper para OpenAI GPT con retries y timeout"""
@@ -19,12 +16,14 @@ class LLMClient:
         self.max_tokens = max_tokens
         self.retries = retries
         self.timeout = timeout
-        self._client = None
+        
+        # Initialize the OpenAI client with API key and explicit http_client to avoid version conflicts
+        self.client = OpenAI(
+            api_key=OPENAI_API_KEY,
+            http_client=httpx.Client(timeout=timeout)
+        )
     
-    # No dedicated OpenAI client instance to avoid httpx/proxies incompatibilities;
-    # we will call the top-level `openai` methods which use the configured api_key.
-    
-    def generate(self, prompt, system_prompt=None, json_mode=False):
+    def generate(self, prompt, system_prompt=None, json_mode=False, temperature=None):
         """
         Generate text from LLM
         
@@ -32,6 +31,7 @@ class LLMClient:
             prompt: User message
             system_prompt: System context
             json_mode: Request JSON output
+            temperature: Override default temperature (optional)
         
         Returns:
             Generated text or dict if json_mode
@@ -46,22 +46,18 @@ class LLMClient:
                 kwargs = {
                     "model": self.model,
                     "messages": messages,
-                    "temperature": self.temperature,
+                    "temperature": temperature if temperature is not None else self.temperature,
                     "max_tokens": self.max_tokens,
                 }
                 
                 if json_mode:
                     kwargs["response_format"] = {"type": "json_object"}
 
-                # Use top-level ChatCompletion for compatibility with installed openai
-                response = openai.ChatCompletion.create(**kwargs)
+                # Use new client method
+                response = self.client.chat.completions.create(**kwargs)
 
-                # Support both response shapes (old/new)
-                try:
-                    content = response.choices[0].message.content.strip()
-                except Exception:
-                    # fallback for other response formats
-                    content = getattr(response.choices[0], 'text', '').strip()
+                # Access content
+                content = response.choices[0].message.content.strip()
                 
                 if json_mode:
                     import json
@@ -74,10 +70,9 @@ class LLMClient:
                 return content
                 
             except Exception as e:
-                # The openai package may expose different exception types depending
-                # on version. Inspect exception class name to decide retry behavior.
+                # Basic error handling
                 exc_name = e.__class__.__name__
-                if exc_name.lower().find('ratelimit') != -1 or exc_name.lower().find('rate') != -1:
+                if "rate" in exc_name.lower():
                     if attempt < self.retries - 1:
                         wait_time = 2 ** attempt
                         logger.warning(f"Rate limited ({exc_name}). Retrying in {wait_time}s...")
@@ -86,7 +81,7 @@ class LLMClient:
                     else:
                         logger.error("Max retries exceeded for rate limit")
                         raise
-                elif exc_name.lower().find('apierror') != -1 or exc_name.lower().find('service') != -1:
+                elif "api" in exc_name.lower() or "service" in exc_name.lower():
                     if attempt < self.retries - 1:
                         wait_time = 2 ** attempt
                         logger.warning(f"API error ({exc_name}): {e}. Retrying in {wait_time}s...")

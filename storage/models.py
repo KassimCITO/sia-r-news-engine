@@ -70,3 +70,15 @@ class AutoLearnProfile(Base):
     confidence = Column(Float, default=0.0)
     last_updated = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+class Settings(Base):
+    __tablename__ = "settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    trend_keywords = Column(Text, default="")
+    wp_url = Column(String, default="")
+    wp_categories = Column(JSON, default=list)  # List of selected category IDs/Names
+    auto_publish_enabled = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+

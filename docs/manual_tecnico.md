@@ -68,6 +68,12 @@
 - **wp_taxonomy_manager.py**: Gestión de categorías/tags
 - **jwt_auth.py**: Autenticación JWT
 - **api_key_auth.py**: Autenticación por API Key
+- **trend_harvester.py**: Orquestador de obtención de tendencias (Google, Twitter, NewsAPI)
+- **article_generator.py**: Orquestador de generación contenido automatizado
+- **topic_expander.py**: Expansión de temas y ángulos con LLM
+- **headline_forge.py**: Generación de titulares virales/SEO
+- **sensitivity_guard.py**: Filtro de contenido sensible y seguridad de marca
+- **scheduler.py**: Sistema de tareas programadas (news cron)
 - **metrics_collector.py**: Recolección de métricas
 - **llm_client.py**: Wrapper de OpenAI
 
@@ -79,7 +85,7 @@
 
 #### 4. Storage (`storage/`)
 - **database.py**: Conexión SQLAlchemy
-- **models.py**: Modelos ORM
+- **models.py**: Modelos ORM (User, ApiKey, PipelineLog, Taxonomy_*, Settings)
 - **migrations/**: Migraciones de BD
 
 ## Instalación

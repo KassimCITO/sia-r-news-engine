@@ -128,7 +128,8 @@ class Pipeline:
             results["stages"]["seo"] = {
                 "status": "completed",
                 "h1": seo_result["h1"],
-                "meta": seo_result["meta_description"]
+                "meta": seo_result["meta_description"],
+                "schema_markup": seo_result.get("schema_markup", {})
             }
             
             # Stage 8: Taxonomy Normalization
@@ -198,6 +199,7 @@ class Pipeline:
                 "final_text": humanized_text,
                 "final_h1": seo_result["h1"],
                 "final_meta_description": seo_result["meta_description"],
+                "final_schema_markup": seo_result.get("schema_markup", {}),
                 "final_categories": normalized_tax["categories"],
                 "final_tags": normalized_tax["tags"],
                 "quality_score": quality_score,

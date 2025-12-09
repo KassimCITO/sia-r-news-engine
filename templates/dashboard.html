@@ -68,6 +68,59 @@
     </div>
 </div>
 
+<!-- Configuration Panel -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-sliders"></i> Configuración Rápida</h5>
+                <button class="btn btn-sm btn-light text-primary" onclick="saveDashboardSettings()">
+                    <i class="bi bi-save"></i> Guardar Cambios
+                </button>
+            </div>
+            <div class="card-body">
+                <form id="dashboardSettingsForm">
+                    <div class="row">
+                        <!-- Keywords -->
+                        <div class="col-md-6 mb-3">
+                            <label for="trend_keywords" class="form-label fw-bold">Palabras Clave (Tendencias)</label>
+                            <textarea class="form-control" name="trend_keywords" id="trend_keywords" rows="4"
+                                placeholder="noticias mexico, inteligencia artificial, economia..."></textarea>
+                            <div class="form-text">Separa las palabras clave con comas. Esto alimenta el buscador de
+                                tendencias.</div>
+                        </div>
+
+                        <!-- WP Config -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="site_url" class="form-label fw-bold">WordPress URL</label>
+                                <div class="input-group">
+                                    <input type="url" class="form-control" name="site_url" id="site_url"
+                                        placeholder="https://misitio.com">
+                                    <button class="btn btn-outline-secondary" type="button"
+                                        onclick="loadWpCategories()">
+                                        <i class="bi bi-arrow-repeat"></i> Cargar Cats
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="wp_categories" class="form-label fw-bold">Categorías Seleccionadas</label>
+                                <select multiple class="form-select" name="wp_categories" id="wp_categories"
+                                    style="height: 100px;">
+                                    <!-- Options populated via JS -->
+                                </select>
+                                <div class="form-text">Selecciona las categorías donde publicar. Ctrl+Click para
+                                    múltiples.</div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Trends Grid -->
 <div class="row mb-4">
     <div class="col-md-12">
@@ -81,7 +134,8 @@
                         <small class="text-muted">Eventos detectados por Google Trends y fuentes sociales</small>
                     </div>
                     <div>
-                        <button class="btn btn-sm btn-outline-primary" onclick="loadTrendsRefresh();">Actualizar</button>
+                        <button class="btn btn-sm btn-outline-primary"
+                            onclick="loadTrendsRefresh();">Actualizar</button>
                     </div>
                 </div>
                 <div id="trends-grid" class="trends-grid">
@@ -130,44 +184,123 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    loadDashboardStats();
-    loadRecentArticles();
-    // Load trends section
-    if (typeof loadTrends === 'function') loadTrends();
-});
+    document.addEventListener('DOMContentLoaded', function () {
+        loadDashboardStats();
+        loadRecentArticles();
+        // Load trends section
+        if (typeof loadTrends === 'function') loadTrends();
 
-function loadDashboardStats() {
-    fetch('/api/ui/status', {
-        headers: {
-            'Authorization': 'Bearer ' + getToken()
-        }
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.stats) {
-            document.getElementById('total-articles').textContent = data.stats.total_runs || 0;
-            document.getElementById('success-rate').textContent = 
-                (data.stats.success_rate * 100).toFixed(1) + '%' || '0%';
-            document.getElementById('pending-count').textContent = data.pending_reviews || 0;
-        }
+        // Load Settings
+        loadDashboardSettings();
     });
-}
 
-function loadRecentArticles() {
-    fetch('/api/ui/reviews?status=pending&limit=10', {
-        headers: {
-            'Authorization': 'Bearer ' + getToken()
-        }
-    })
-    .then(r => r.json())
-    .then(data => {
-        const tbody = document.getElementById('articles-body');
-        tbody.innerHTML = '';
-        
-        if (data.reviews && data.reviews.length > 0) {
-            data.reviews.forEach(review => {
-                const row = `
+    function loadDashboardSettings() {
+        fetch('/api/ui/settings', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const s = data.settings;
+                    if (document.getElementById('trend_keywords'))
+                        document.getElementById('trend_keywords').value = s.trend_keywords || '';
+                    if (document.getElementById('site_url'))
+                        document.getElementById('site_url').value = s.wp_url || '';
+
+                    // If WP URL exists, try to load categories
+                    if (s.wp_url) {
+                        loadWpCategories(s.wp_categories);
+                    }
+                }
+            });
+    }
+
+    function saveDashboardSettings() {
+        const data = {
+            trend_keywords: document.getElementById('trend_keywords').value,
+            site_url: document.getElementById('site_url').value,
+            wp_categories: Array.from(document.getElementById('wp_categories').selectedOptions).map(o => o.value)
+        };
+
+        fetch('/api/ui/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            },
+            body: JSON.stringify(data)
+        })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    alert('Configuración guardada correctamente');
+                    if (typeof loadTrends === 'function') loadTrends(true); // force refresh
+                } else {
+                    alert('Error al guardar: ' + (res.message || res.error));
+                }
+            })
+            .catch(err => alert('Error de red: ' + err));
+    }
+
+    function loadWpCategories(selectedIds = []) {
+        const url = document.getElementById('site_url').value;
+        if (!url) return;
+
+        const select = document.getElementById('wp_categories');
+        select.innerHTML = '<option>Cargando...</option>';
+
+        fetch(`${url}/wp-json/wp/v2/categories?per_page=100`)
+            .then(r => {
+                if (!r.ok) throw new Error('Error fetching WP categories');
+                return r.json();
+            })
+            .then(cats => {
+                select.innerHTML = '';
+                cats.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.name;
+                    opt.textContent = c.name;
+                    if (selectedIds.includes(c.name)) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            })
+            .catch(e => {
+                console.error(e);
+                select.innerHTML = '<option value="">Error al cargar (Verifique CORS/URL)</option>';
+            });
+    }
+
+    function loadDashboardStats() {
+        fetch('/api/ui/status', {
+            headers: {
+                'Authorization': 'Bearer ' + getToken()
+            }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.stats) {
+                    document.getElementById('total-articles').textContent = data.stats.total_runs || 0;
+                    document.getElementById('success-rate').textContent =
+                        (data.stats.success_rate * 100).toFixed(1) + '%' || '0%';
+                    document.getElementById('pending-count').textContent = data.pending_reviews || 0;
+                }
+            });
+    }
+
+    function loadRecentArticles() {
+        fetch('/api/ui/reviews?status=pending&limit=10', {
+            headers: {
+                'Authorization': 'Bearer ' + getToken()
+            }
+        })
+            .then(r => r.json())
+            .then(data => {
+                const tbody = document.getElementById('articles-body');
+                tbody.innerHTML = '';
+
+                if (data.reviews && data.reviews.length > 0) {
+                    data.reviews.forEach(review => {
+                        const row = `
                     <tr>
                         <td>${review.id}</td>
                         <td>${review.preview_text}</td>
@@ -183,23 +316,23 @@ function loadRecentArticles() {
                         </td>
                     </tr>
                 `;
-                tbody.innerHTML += row;
+                        tbody.innerHTML += row;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay artículos en revisión</td></tr>';
+                }
             });
-        } else {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay artículos en revisión</td></tr>';
-        }
-    });
-}
+    }
 
-function getQualityBadge(score) {
-    if (score >= 0.85) return 'success';
-    if (score >= 0.70) return 'info';
-    if (score >= 0.50) return 'warning';
-    return 'danger';
-}
+    function getQualityBadge(score) {
+        if (score >= 0.85) return 'success';
+        if (score >= 0.70) return 'info';
+        if (score >= 0.50) return 'warning';
+        return 'danger';
+    }
 
-function getToken() {
-    return localStorage.getItem('auth_token') || '';
-}
+    function getToken() {
+        return localStorage.getItem('auth_token') || '';
+    }
 </script>
 {% endblock %}

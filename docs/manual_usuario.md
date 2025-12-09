@@ -11,6 +11,25 @@ SIA-R es un asistente inteligente de IA que:
 - ✅ Publica directamente en WordPress
 - ✅ Aprende de tus patrones de publicación
 
+- ✅ Aprende de tus patrones de publicación
+
+## Nuevas Funciones: Autopilot y Tendencias
+
+### 🚀 Generación Automática (Autopilot)
+SIA-R ahora incluye un **Scheduler** que monitorea tendencias 24/7.
+- **Configuración**: Ve a `Dashboard > Configuración`.
+- **Palabras Clave**: Define temas de interés (ej: "IA, Economía, Deportes").
+- **Auto-Publicación**: Activa para publicar sin revisión manual (¡Usar con precaución!).
+
+### 📈 Monitor de Tendencias
+El Dashboard muestra eventos en tiempo real de:
+- Google Trends
+- Twitter / X
+- NewsAPI
+- RSS Feeds
+
+Puedes hacer clic en "Ejecutar Pipeline" desde cualquier tendencia para crear un artículo al instante.
+
 ## Inicio Rápido en 5 Pasos
 
 ### Paso 1: Acceder al Sistema
