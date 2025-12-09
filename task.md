@@ -1,0 +1,47 @@
+# SIA-R News Engine Implementation Tasks
+
+- [x] Phase 1: Core Fixes & Setup
+    - [x] Database schema updates
+    - [x] Refactor trend services
+    - [x] Implement scheduler
+    - [x] Update app.py
+    - [x] UI Templates (index.html, dashboard.html)
+- [x] Phase 2: Feature Completion
+    - [x] Topic Expander service
+    - [x] Headline Forge service
+    - [x] Sensitivity Guard service
+    - [x] Article Generator service
+    - [x] Integrate services into scheduler
+- [x] Phase 3: Enhancements & SEO
+    - [x] Review and enhance SEO Optimizer
+    - [x] Implement advanced SEO features (meta tags, schema markup optimization)
+    - [x] Performance optimizations
+    - [x] Final verification and testing
+- [ ] Phase 4: Maintenance & Bugfixes
+    - [x] Fix theme toggle (main.js syntax error)
+    - [x] Fix backend import error (get_session vs get_db_session)
+    - [x] Restore "Use Trend" functionality
+    - [x] Debug "Error loading trends" in Pipeline run page
+    - [x] Implement 3-hour caching for Trends
+    - [x] Optimize Scheduler for Trend updates
+    - [x] Fix LLM temperature parameter
+    - [x] Change model to gpt-3.5-turbo for compatibility
+    - [x] Fix pipeline trends text truncation
+    - [x] Fix pipeline trends click error
+    - [x] Sync categories between Dashboard and Pipeline
+- [ ] Phase 5: Testing & Documentation (Next Session)
+    - [ ] Update and run tests in /tests directory
+        - [ ] Update test_pipeline.py for new functionality
+        - [ ] Update test_ui.py for new routes
+        - [ ] Update test_cleaner.py if needed
+        - [ ] Update test_tagger.py if needed
+        - [ ] Update test_wp_client.py if needed
+    - [ ] Update user manual
+    - [ ] Update technical documentation
+    - [ ] Debug pipeline/run save functionality
+        - [ ] Investigate why articles don't appear in "Artículos Recientes en Revisión"
+        - [ ] Investigate why articles don't appear in published.html
+        - [ ] Fix article persistence after clicking "Guardar"
+        - [ ] En la ventana modal 'Resultados de Ejecución', no estamos usando los programas ya creados dentro del directorio services, para actualizar la categoría de los artículos y los tags. Por ejemplo: tagger_llm.py, category_llm.py, seo_optimizer.py, etc.
+        - [ ] La app debe crear una imagen ad-hoc al artículo, para que pueda ser publicada en la web, con las mejores prácticas web para SEO y UX; esto se debe hacer en el caso de que no se proporcione una imagen o la existente tenga derechos de autor o no sea apropiada para publicación por su tamaño o calidad.
+
